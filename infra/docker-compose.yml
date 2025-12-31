@@ -1,4 +1,15 @@
 services:
+  quizzer:
+    image: macchiato23/quizzer:0.0.2-SNAPSHOT
+    environment:
+      DATABASE_HOST: postgres
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    networks:
+      - postgres
+    ports:
+      - "8180:8080"
+    depends_on:
+      - postgres
   kafka-1:
     image: confluentinc/cp-kafka:latest
     container_name: kafka-1

@@ -7,6 +7,7 @@
         <option value="$PROJECT_DIR$/pom.xml" />
         <option value="$PROJECT_DIR$/backend/common/pom.xml" />
         <option value="$PROJECT_DIR$/backend/event-ingest-service/pom.xml" />
+        <option value="$PROJECT_DIR$/backend/quizzer/pom.xml" />
       </list>
     </option>
   </component>

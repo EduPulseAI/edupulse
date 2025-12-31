@@ -143,18 +143,18 @@ If running behind schedule at hour 24, pivot to:
     - Download credentials JSON
 
 #### Backend Team (2 people)
-- [ ] **0:00-1:00** - Spring Boot project scaffolding
+- [x] **0:00-1:00** - Spring Boot project scaffolding
     - Use Spring Initializr (Spring Boot 3.2, Java 17)
     - Dependencies: Spring Kafka, Spring Web, Spring WebSocket, PostgreSQL
     - Add Confluent Avro dependencies to `build.gradle`
-- [ ] **1:00-2:00** - Configure `application.yml` for Kafka
+- [x] **1:00-2:00** - Configure `application.yml` for Kafka
     - Bootstrap servers, Schema Registry URL
     - Avro serializer/deserializer configs
     - Test connection with simple producer/consumer
-- [ ] **2:00-3:00** - Generate Java classes from Avro schemas
+- [x] **2:00-3:00** - Generate Java classes from Avro schemas
     - Use `avro-maven-plugin` or manual `avro-tools`
     - Verify compilation
-- [ ] **3:00-4:00** - Build Quiz Service skeleton
+- [x] **3:00-4:00** - Build Quiz Service skeleton
     - REST endpoint: `POST /api/quiz/submit-answer`
     - Produce QuizAnswer to Kafka (hardcoded test data)
     - Manual test with curl
@@ -165,15 +165,15 @@ If running behind schedule at hour 24, pivot to:
     - Log consumed events
 
 #### Frontend Team (1 person)
-- [ ] **0:00-1:00** - Next.js project setup
+- [x] **0:00-1:00** - Next.js project setup
     - `npx create-next-app edupulse-ui`
     - Install dependencies: Tailwind CSS, WebSocket library
-- [ ] **1:00-3:00** - Basic student UI layout
+- [x] **1:00-3:00** - Basic student UI layout
     - Question display component
     - Multiple choice answer buttons
     - Submit button
     - Placeholder for hint panel
-- [ ] **3:00-4:00** - Wire submit button to backend
+- [x] **3:00-4:00** - Wire submit button to backend
     - `POST /api/quiz/submit-answer`
     - Display "Correct!" or "Try again"
 - [ ] **4:00-6:00** - Instructor dashboard skeleton

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="NxAngularConfigService" workspaceLocation="file://$PROJECT_DIR$/frontend/quizzer-frontend/nx.json">
+    <projects>
+      <project name="base" file="file://$PROJECT_DIR$/frontend/quizzer-frontend/features/base/project.json" />
+      <project name="client" file="file://$PROJECT_DIR$/frontend/quizzer-frontend/clients/client/project.json" />
+      <project name="coding-quizzer" file="file://$PROJECT_DIR$/frontend/quizzer-frontend/apps/coding-quizzer/project.json" />
+      <project name="ingest" file="file://$PROJECT_DIR$/frontend/quizzer-frontend/features/ingest/project.json" />
+      <project name="quiz" file="file://$PROJECT_DIR$/frontend/quizzer-frontend/features/quiz/project.json" />
+      <project name="topic" file="file://$PROJECT_DIR$/frontend/quizzer-frontend/features/topic/project.json" />
+      <project name="ui" file="file://$PROJECT_DIR$/frontend/quizzer-frontend/features/ui/project.json" />
+    </projects>
+  </component>
+</project>
