@@ -39,3 +39,4 @@ build/
 .DS_Store
 
 infra/secret/*
+!infra/secret/.env.example

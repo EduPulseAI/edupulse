@@ -30,12 +30,13 @@ EduPulse is a real-time adaptive learning platform that detects student disengag
 - Strict schema governance with Avro and Confluent Schema Registry
 
 **Technology Stack:**
-- **Backend:** Spring Boot 3.2, Java 17, Kafka Streams
-- **Frontend:** Next.js 14, React 18, TypeScript
+- **Backend:** Spring Boot 3.5, Java 21
+- **Stream Processing:** Apache Flink 1.18+
+- **Frontend:** Next.js 15, React 19, TypeScript
 - **Messaging:** Confluent Kafka, Schema Registry, Avro
 - **AI/ML:** Vertex AI, Google Gemini
-- **Data:** PostgreSQL, Redis, BigQuery
-- **Deployment:** Docker, Google Cloud (GKE, Cloud SQL, Memorystore)
+- **Data:** PostgreSQL, Redis
+- **Deployment:** Docker, Google Cloud (GKE, Cloud SQL, Memorystore), Confluent Cloud
 
 ---
 
@@ -46,24 +47,45 @@ EduPulse is a real-time adaptive learning platform that detects student disengag
 │                    Frontend (Next.js)                       │
 │  Student UI              │          Instructor Dashboard    │
 └────────────┬─────────────┴──────────────────┬──────────────┘
-             │ WebSocket                       │
+             │ WebSocket/SSE                   │
              ▼                                 ▼
 ┌────────────────────────────────────────────────────────────┐
 │              Realtime Gateway Service                       │
+│         (WebSocket/SSE → Kafka Consumer)                    │
 └────────────┬───────────────────────────────────────────────┘
              │
              ▼
 ┌────────────────────────────────────────────────────────────┐
 │               Confluent Kafka Cluster                       │
-│  Topics: quiz.answers, engagement.scores, adapt.actions,   │
-│          instructor.tips, session.events                    │
-└─────┬──────────────────────────────────────────────────────┘
+│  Topics: quiz.answers, session.events, engagement.scores,  │
+│          adapt.actions, instructor.tips, cohort.metrics     │
+│  (Schema Registry enforces Avro schemas - BACKWARD compat)  │
+└─────┬────────────────────────────────┬────────────────────┘
+      │                                │
+      │  ┌─────────────────────────────▼────────────────────┐
+      │  │         Apache Flink Cluster                     │
+      │  │  ┌──────────────────────────────────────────┐    │
+      │  │  │  Engagement Analytics Job                │    │
+      │  │  │  • Windowed metrics (60s tumbling)       │    │
+      │  │  │  • Pattern detection (CEP)               │    │
+      │  │  │  • Enrichment joins                      │    │
+      │  │  │  IN: quiz.answers, session.events        │    │
+      │  │  │  OUT: engagement.scores                  │    │
+      │  │  └──────────────────────────────────────────┘    │
+      │  │  ┌──────────────────────────────────────────┐    │
+      │  │  │  Instructor Metrics Job                  │    │
+      │  │  │  • Cohort aggregates (5-min sliding)     │    │
+      │  │  │  • Heatmap data                          │    │
+      │  │  │  • Skill-level struggle detection        │    │
+      │  │  │  IN: engagement.scores, quiz.answers     │    │
+      │  │  │  OUT: cohort.metrics, instructor.tips    │    │
+      │  │  └──────────────────────────────────────────┘    │
+      │  └─────────────────────────────────────────────────┘
       │
-      ├──> Event Ingest Service (produces quiz.answers)
-      ├──> Engagement Service (consumes quiz.answers, produces engagement.scores)
-      ├──> Bandit Engine (consumes engagement.scores, produces adapt.actions)
-      ├──> Tip Service (consumes engagement.scores, produces instructor.tips)
-      └──> Content Adapter (consumes adapt.actions, enriches with questions)
+      ├──> Event Ingest Service (HTTP → Kafka producer)
+      ├──> Bandit Engine (Kafka consumer → Vertex AI → Kafka producer)
+      ├──> Tip Service (Kafka consumer → Gemini → Kafka producer)
+      └──> Content Adapter (Kafka consumer → enriches adapt.actions)
 ```
 
 ---
@@ -75,27 +97,23 @@ edupulse/
 ├── backend/
 │   ├── event-ingest-service/
 │   │   ├── src/
-│   │   ├── build.gradle
-│   │   └── README.md
-│   ├── engagement-service/
-│   │   ├── src/
-│   │   ├── build.gradle
+│   │   ├── pom.xml
 │   │   └── README.md
 │   ├── bandit-engine/
 │   │   ├── src/
-│   │   ├── build.gradle
+│   │   ├── pom.xml
 │   │   └── README.md
 │   ├── tip-service/
 │   │   ├── src/
-│   │   ├── build.gradle
+│   │   ├── pom.xml
 │   │   └── README.md
 │   ├── content-adapter/
 │   │   ├── src/
-│   │   ├── build.gradle
+│   │   ├── pom.xml
 │   │   └── README.md
 │   ├── realtime-gateway/
 │   │   ├── src/
-│   │   ├── build.gradle
+│   │   ├── pom.xml
 │   │   └── README.md
 │   └── shared/
 │       └── avro-schemas/
@@ -385,54 +403,59 @@ logging:
 
 ---
 
-### 2. Engagement Service
+### 2. Apache Flink Stream Processing
 
-**Purpose:** Compute real-time engagement scores from streaming behavioral signals
+**Purpose:** Real-time streaming analytics for engagement scoring, pattern detection, and instructor metrics
+
+**Deployment:** Flink cluster (Docker Compose locally, Confluent Cloud Flink for production)
+
+#### Engagement Analytics Job
 
 **Responsibilities:**
-- Consume quiz answers and session events
-- Aggregate signals in 60-second tumbling windows
-- Compute weighted engagement score
-- Detect declining trends
-- Trigger alerts when score < 0.4
-- Produce engagement scores to Kafka
+- Consume quiz answers and session events from Kafka
+- Compute windowed engagement scores (60-second tumbling windows)
+- Detect disengagement patterns (rapid guessing, engagement collapse, idle spikes)
+- Trigger alerts when engagement score < 0.4
+- Produce engagement scores back to Kafka
 
 **Kafka Topics:**
-- **Consumes from:** `quiz.answers`, `session.events`
+- **Consumes from:** `quiz.answers`, `session.events`, `content.questions` (compacted, for enrichment)
 - **Produces to:** `engagement.scores`
-- **Consumer Group:** `engagement-scorer-group`
-
-**Schema Registry Subjects:**
-- `quiz.answers-value` (reads)
-- `session.events-value` (reads)
-- `engagement.scores-value` (writes)
 
 **Processing Model:**
 
-Uses Kafka Streams for stateful aggregation:
+Uses Flink DataStream API with keyed state:
 
 ```java
-KStream<String, QuizAnswer> quizAnswers = builder.stream("quiz.answers");
-KStream<String, SessionEvent> sessionEvents = builder.stream("session.events");
+DataStream<QuizAnswer> quizAnswers = env
+    .addSource(new FlinkKafkaConsumer<>("quiz.answers", avroSchema, kafkaProps))
+    .keyBy(QuizAnswer::getStudentId);
 
-// Join streams by studentId
-KTable<Windowed<String>, StudentEngagementState> aggregated = 
-    quizAnswers
-        .selectKey((k, v) -> v.getEnvelope().getStudentId())
-        .groupByKey()
-        .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(60)))
-        .aggregate(
-            StudentEngagementState::new,
-            (key, value, aggregate) -> aggregate.update(value),
-            Materialized.as("student-engagement-state")
-        );
+DataStream<SessionEvent> sessionEvents = env
+    .addSource(new FlinkKafkaConsumer<>("session.events", avroSchema, kafkaProps))
+    .keyBy(SessionEvent::getStudentId);
 
-// Compute scores
-aggregated
-    .toStream()
-    .mapValues(EngagementScoringService::computeScore)
-    .filter((k, v) -> v != null)
-    .to("engagement.scores");
+// Join streams
+DataStream<StudentActivity> joined = quizAnswers
+    .connect(sessionEvents)
+    .flatMap(new StudentActivityJoiner());
+
+// Window and aggregate
+DataStream<EngagementScore> scores = joined
+    .keyBy(activity -> activity.getStudentId())
+    .window(TumblingEventTimeWindows.of(Time.seconds(60)))
+    .aggregate(new EngagementAggregator());
+
+// Pattern detection (CEP)
+PatternStream<StudentActivity> patterns = CEP.pattern(
+    joined.keyBy(StudentActivity::getStudentId),
+    Pattern.<StudentActivity>begin("rapid")
+        .where(a -> a.getTimeSpent() < 15000)
+        .times(3).within(Time.seconds(15))
+);
+
+// Produce results
+scores.addSink(new FlinkKafkaProducer<>("engagement.scores", avroSchema, kafkaProps));
 ```
 
 **Scoring Formula:**
@@ -440,69 +463,133 @@ aggregated
 ```
 score = 0.3 * dwellScore + 0.4 * accuracyScore + 0.3 * pacingScore
 
-dwellScore = 1 - (actual_time - expected_time) / expected_time
+dwellScore = 1 - min(|actual_time - expected_time| / expected_time, 1.0)
 accuracyScore = correct_answers / total_attempts
-pacingScore = questions_per_minute / baseline_pace
+pacingScore = min(questions_per_minute / baseline_pace, 1.0)
 
 alertThresholdCrossed = (score < 0.4 && trend == DECLINING)
 ```
 
+**State Management:**
+- State backend: RocksDB (for large state, disk-spillable)
+- Checkpoint interval: 60 seconds
+- State TTL: 10 minutes (cleanup old student states)
+
 **Environment Variables:**
 
 ```bash
-SERVICE_NAME=engagement-service
-SERVER_PORT=8082
-# ... (same Kafka/DB vars as Event Ingest)
-ENGAGEMENT_WINDOW_SECONDS=60
-ENGAGEMENT_ALERT_THRESHOLD=0.4
-REDIS_HOST=localhost
-REDIS_PORT=6379
+# Flink
+FLINK_PROPERTIES="
+  jobmanager.rpc.address: jobmanager
+  taskmanager.numberOfTaskSlots: 4
+  state.backend: rocksdb
+  state.checkpoints.dir: file:///opt/flink/checkpoints
+  execution.checkpointing.interval: 60000
+"
+
+# Kafka
+KAFKA_BOOTSTRAP_SERVERS=pkc-xxxxx.us-east-1.aws.confluent.cloud:9092
+KAFKA_PROPERTIES="
+  security.protocol=SASL_SSL
+  sasl.mechanism=PLAIN
+  sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username='${KAFKA_API_KEY}' password='${KAFKA_API_SECRET}';
+"
+
+# Schema Registry
+SCHEMA_REGISTRY_URL=https://psrc-xxxxx.us-east-1.aws.confluent.cloud
+SCHEMA_REGISTRY_PROPERTIES="
+  basic.auth.credentials.source=USER_INFO
+  basic.auth.user.info=${SCHEMA_REGISTRY_KEY}:${SCHEMA_REGISTRY_SECRET}
+"
 ```
 
-**Local Setup:**
+**Local Setup (Docker Compose):**
 
 ```bash
-cd backend/engagement-service
-./gradlew bootRun
+# Start Flink cluster
+docker-compose up -d jobmanager taskmanager
+
+# Submit Engagement Analytics Job
+docker exec -it jobmanager flink run \
+  -c com.edupulse.flink.EngagementAnalyticsJob \
+  /opt/flink/jobs/engagement-analytics.jar
+
+# Monitor job
+docker exec -it jobmanager flink list
 ```
 
 **Health Check:**
 
 ```bash
-curl http://localhost:8082/actuator/health
+# Flink UI
+open http://localhost:8081
 
-# Check Kafka Streams state
-curl http://localhost:8082/actuator/metrics/kafka.stream.state
+# Check running jobs
+curl http://localhost:8081/jobs
+
+# Check checkpoint statistics
+curl http://localhost:8081/jobs/<job-id>/checkpoints
 ```
 
-**DLQ Behavior:**
-
-Deserialization failures sent to `quiz.answers.dlq`:
-
-```java
-@Bean
-public CommonErrorHandler errorHandler() {
-    DefaultErrorHandler handler = new DefaultErrorHandler(
-        (record, ex) -> dlqProducer.send("quiz.answers.dlq", record),
-        new FixedBackOff(1000L, 3)
-    );
-    handler.addNotRetryableExceptions(SerializationException.class);
-    return handler;
-}
-```
-
-**Troubleshooting:**
+**Monitoring:**
 
 ```bash
-# Check consumer lag
+# Check backpressure
+curl http://localhost:8081/jobs/<job-id>/vertices/<vertex-id>/backpressure
+
+# View Kafka consumer lag
 kafka-consumer-groups --bootstrap-server <broker> \
-  --group engagement-scorer-group --describe
+  --group engagement-analytics-job --describe
+```
 
-# View Kafka Streams state store
-curl http://localhost:8082/actuator/kafkastreams
+---
 
-# Query state store directly
-curl http://localhost:8082/state/student-engagement-state/s123
+#### Instructor Metrics Job
+
+**Responsibilities:**
+- Aggregate cohort-level engagement metrics
+- Generate heatmap data for instructor dashboard
+- Detect skill-level struggles across cohorts
+- Emit tip triggers for Gemini enrichment
+
+**Kafka Topics:**
+- **Consumes from:** `engagement.scores`, `quiz.answers`
+- **Produces to:** `cohort.metrics`, `instructor.tips`
+
+**Processing Model:**
+
+```java
+DataStream<EngagementScore> scores = env
+    .addSource(new FlinkKafkaConsumer<>("engagement.scores", avroSchema, kafkaProps));
+
+// Cohort aggregates (keyed by cohortId)
+scores
+    .keyBy(score -> getCohortId(score.getSessionId()))
+    .window(SlidingEventTimeWindows.of(Time.minutes(5), Time.minutes(1)))
+    .aggregate(new CohortMetricsAggregator())
+    .addSink(new FlinkKafkaProducer<>("cohort.metrics", avroSchema, kafkaProps));
+
+// Skill struggle detection (keyed by skillTag)
+DataStream<QuizAnswer> answers = env
+    .addSource(new FlinkKafkaConsumer<>("quiz.answers", avroSchema, kafkaProps));
+
+scores
+    .join(answers)
+    .where(EngagementScore::getStudentId)
+    .equalTo(QuizAnswer::getStudentId)
+    .window(TumblingEventTimeWindows.of(Time.minutes(2)))
+    .apply(new SkillStruggleDetector())
+    .filter(tip -> tip.getPriority().equals("HIGH"))
+    .addSink(new FlinkKafkaProducer<>("instructor.tips", avroSchema, kafkaProps));
+```
+
+**Local Setup:**
+
+```bash
+# Submit Instructor Metrics Job
+docker exec -it jobmanager flink run \
+  -c com.edupulse.flink.InstructorMetricsJob \
+  /opt/flink/jobs/instructor-metrics.jar
 ```
 
 ---
@@ -1248,7 +1335,7 @@ open http://localhost:3000
 Add demo mode toggle for rapid testing:
 
 ```typescript
-// src/lib/demo-mode.ts
+// src/lib/config/index.ts
 export const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
 export const DEMO_CONFIG = {
@@ -1340,18 +1427,7 @@ gcloud services enable generativelanguage.googleapis.com
 export GEMINI_API_KEY=$(gcloud auth print-access-token)
 ```
 
-#### 3. BigQuery (Optional Analytics)
-
-```bash
-# Create dataset
-bq mk --dataset PROJECT_ID:kafka_events
-
-# Create tables (via Kafka Connect or manual)
-bq mk --table kafka_events.quiz_answers \
-  event_id:STRING,student_id:STRING,question_id:STRING,is_correct:BOOL,timestamp:TIMESTAMP
-```
-
-#### 4. Cloud SQL (PostgreSQL)
+#### 3. Cloud SQL (PostgreSQL)
 
 ```bash
 # Create instance
@@ -1370,7 +1446,7 @@ gcloud sql users create edupulse \
   --password=SECURE_PASSWORD
 ```
 
-#### 5. Memorystore (Redis)
+#### 4. Memorystore (Redis)
 
 ```bash
 # Create instance

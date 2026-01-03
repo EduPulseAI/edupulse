@@ -22,7 +22,7 @@
 
 ### Non-Goals
 
-- **Batch analytics:** Offline dashboards and historical reports (deferred to BigQuery sink)
+- **Batch analytics:** Offline dashboards and historical reports (handled via Kafka topic retention)
 - **Video streaming:** Webcam attention tracking is optional/simulated for MVP
 - **Multi-tenancy isolation:** Single educational institution for initial deployment
 - **Mobile native apps:** Web-first approach; native apps not in scope
@@ -161,13 +161,7 @@
 │  │ - Instructor tips         │  │  │  │ - WebSocket sessions      │ │
 │  └───────────────────────────┘  │  │  │ - Feature cache           │ │
 │                                  │  │  └───────────────────────────┘ │
-└──────────────────────────────────┘  │  ┌───────────────────────────┐ │
-                                      │  │ BigQuery (via Kafka       │ │
-                                      │  │ Connect Sink)             │ │
-                                      │  │ - Event replay            │ │
-                                      │  │ - Analytics               │ │
-                                      │  └───────────────────────────┘ │
-                                      └──────────────────────────────────┘
+└──────────────────────────────────┘  └──────────────────────────────────┘
 ┌─────────────────────────────────────────────────────────────────────────┐
 │   Schema Governance Layer                                               │
 │  ┌─────────────────────────────────────────────────────────────────────┤
@@ -186,9 +180,9 @@ Student Action (quiz answer)
     ↓
 Event Ingest Service → quiz.answers (Avro)
     ↓
-Engagement Service consumes, computes score
+Flink Engagement Analytics Job consumes, computes score
     ↓
-Engagement Service → engagement.scores (Avro)
+Flink → engagement.scores (Avro)
     ↓
 ┌───────────────────────────────┬────────────────────────────────┐
 │                               │                                │
@@ -254,55 +248,102 @@ edupulse:
 
 ---
 
-### 4.2 Feature / Engagement Service
+### 4.2 Apache Flink Stream Processing
 
-**Responsibility:** Compute real-time engagement scores from streaming events
+**Responsibility:** Real-time streaming analytics for engagement scoring, pattern detection, and instructor metrics
 
-**Technology:** Spring Boot, Kafka Streams
+**Technology:** Apache Flink 1.18+, Flink DataStream API, Flink CEP
+
+**Jobs:**
+
+#### Engagement Analytics Job
 
 **Logic:**
 ```
-1. Consume quiz.answers and session.events
-2. Maintain per-student stateful aggregation (tumbling window: 60s)
-3. Compute engagement score components:
+1. Consume quiz.answers and session.events from Kafka
+2. Join streams by studentId
+3. Maintain per-student stateful aggregation (tumbling window: 60s)
+4. Enrich with question metadata from content.questions (compacted topic)
+5. Compute engagement score components:
    - dwellScore: average time on questions vs expected
    - accuracyScore: correct answers / total attempts
    - pacingScore: questions per minute vs baseline
-   - attentionScore: (optional) webcam data
-4. Weighted sum: score = 0.3*dwell + 0.4*accuracy + 0.3*pacing
-5. Detect trend (compare to previous 3 windows)
-6. Publish EngagementScore to engagement.scores topic
-7. Trigger alert if score < 0.4 and trend = DECLINING
+6. Weighted sum: score = 0.3*dwell + 0.4*accuracy + 0.3*pacing
+7. Detect patterns using Flink CEP:
+   - Rapid guessing: 3+ answers in <15s with <40% accuracy
+   - Engagement collapse: score drops >0.3 in 2 consecutive windows
+   - Idle spike: >120s gap between answers
+8. Publish EngagementScore to engagement.scores topic
+9. Trigger alert if score < 0.4 and trend = DECLINING
 ```
 
 **Kafka Interaction:**
-- **Consumes from:** quiz.answers, session.events
+- **Consumes from:** quiz.answers, session.events, content.questions
 - **Produces to:** engagement.scores
-- **State Store:** student-engagement-state (RocksDB)
+- **State Backend:** RocksDB with 10-minute TTL
 
 **Stateful Stream Processing:**
 ```java
-KStream<String, QuizAnswer> quizAnswers = builder.stream("quiz.answers");
-KStream<String, SessionEvent> sessionEvents = builder.stream("session.events");
+DataStream<QuizAnswer> quizAnswers = env
+    .addSource(new FlinkKafkaConsumer<>("quiz.answers", avroSchema, kafkaProps))
+    .keyBy(QuizAnswer::getStudentId);
 
-KTable<String, StudentEngagementState> aggregated = quizAnswers
-    .selectKey((k, v) -> v.getEnvelope().getStudentId())
-    .groupByKey()
-    .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(60)))
-    .aggregate(
-        StudentEngagementState::new,
-        (key, value, aggregate) -> aggregate.update(value),
-        Materialized.as("student-engagement-state")
-    );
+DataStream<SessionEvent> sessionEvents = env
+    .addSource(new FlinkKafkaConsumer<>("session.events", avroSchema, kafkaProps))
+    .keyBy(SessionEvent::getStudentId);
 
-aggregated
-    .toStream()
-    .mapValues(EngagementScoringService::computeScore)
-    .to("engagement.scores");
+// Join and aggregate
+DataStream<StudentActivity> joined = quizAnswers
+    .connect(sessionEvents)
+    .flatMap(new StudentActivityJoiner());
+
+DataStream<EngagementScore> scores = joined
+    .keyBy(activity -> activity.getStudentId())
+    .window(TumblingEventTimeWindows.of(Time.seconds(60)))
+    .aggregate(new EngagementAggregator());
+
+// Pattern detection
+PatternStream<StudentActivity> rapidGuessing = CEP.pattern(
+    joined.keyBy(StudentActivity::getStudentId),
+    Pattern.<StudentActivity>begin("rapid")
+        .where(a -> a.getTimeSpent() < 15000)
+        .times(3).within(Time.seconds(15))
+);
+
+scores.addSink(new FlinkKafkaProducer<>("engagement.scores", avroSchema, kafkaProps));
 ```
+
+#### Instructor Metrics Job
+
+**Logic:**
+```
+1. Consume engagement.scores and quiz.answers
+2. Aggregate by cohortId (sliding window: 5 min, slide 1 min)
+3. Compute cohort-level metrics:
+   - Engagement distribution (high/medium/low counts)
+   - Average engagement score
+   - Alerting student list
+4. Join with quiz.answers to detect skill struggles
+5. Publish to cohort.metrics topic
+6. Emit high-priority tips to instructor.tips topic
+```
+
+**State Management:**
+- Checkpoint interval: 60 seconds
+- Checkpointing mode: EXACTLY_ONCE
+- State TTL: Engagement job 10 min, Instructor job 30 min
 
 **Configuration:**
 ```yaml
+flink:
+  execution:
+    checkpointing:
+      interval: 60000
+      mode: EXACTLY_ONCE
+  state:
+    backend: rocksdb
+    checkpoints:
+      dir: file:///opt/flink/checkpoints
 edupulse:
   engagement:
     scoring:
@@ -316,7 +357,6 @@ edupulse:
         red: 0.4
     windowing:
       duration-seconds: 60
-      grace-period-seconds: 5
 ```
 
 ---
@@ -744,7 +784,7 @@ TTL: 3600 seconds
 
 **Key Selection Rationale:**
 - **sessionId as key:** Ensures all events for a session go to same partition
-  - Enables stateful processing (Kafka Streams)
+  - Enables stateful processing (Flink)
   - Maintains event ordering within session
 - **Composite key (studentId, questionId)** for quiz.answers:
   - Enables per-student and per-question analytics
@@ -774,12 +814,12 @@ TTL: 3600 seconds
 
 | Service | Consumes From | Consumer Group | Offset Commit | Max Poll |
 |---------|---------------|----------------|---------------|----------|
-| Engagement Service | quiz.answers, session.events | engagement-scorer-group | manual | 500 |
+| Flink Engagement Analytics | quiz.answers, session.events | engagement-analytics-job | managed by Flink | - |
+| Flink Instructor Metrics | engagement.scores, quiz.answers | instructor-metrics-job | managed by Flink | - |
 | Bandit Engine | engagement.scores | bandit-policy-group | manual | 100 |
 | Tip Service | engagement.scores, quiz.answers | tip-generation-group | manual | 100 |
 | Content Adapter | adapt.actions | content-adapter-group | manual | 100 |
-| Realtime Gateway | adapt.actions, instructor.tips | realtime-gateway | manual | 500 |
-| BigQuery Sink (Kafka Connect) | all topics | bigquery-sink-group | auto | 1000 |
+| Realtime Gateway | adapt.actions, instructor.tips, cohort.metrics | realtime-gateway | manual | 500 |
 
 **Configuration Highlights:**
 - **Manual offset commit:** Ensures at-least-once processing (commit after successful processing)
@@ -824,12 +864,12 @@ TTL: 3600 seconds
 └─────────────────────────────────────────┘
        │
        │ consumed by (fan-out)
-       ├─────────────────┬──────────────┐
-       ▼                 ▼              ▼
-┌────────────┐  ┌──────────────┐  ┌──────────┐
-│ Engagement │  │ Tip Service  │  │ BigQuery │
-│  Service   │  │              │  │   Sink   │
-└────────────┘  └──────────────┘  └──────────┘
+       ├──────────────────────┐
+       ▼                      ▼
+┌─────────────────┐  ┌──────────────┐
+│ Flink Analytics │  │ Tip Service  │
+│      Jobs       │  │              │
+└─────────────────┘  └──────────────┘
 ```
 
 **Timing:**
@@ -843,9 +883,9 @@ TTL: 3600 seconds
 
 ```
 ┌──────────────────┐
+│  Flink           │
 │  Engagement      │
-│  Service         │
-│  (Kafka Streams) │
+│  Analytics Job   │
 └────────┬─────────┘
          │ 1. Consume quiz.answers + session.events
          │ 2. Aggregate in 60s tumbling window
@@ -891,10 +931,10 @@ TTL: 3600 seconds
 ```
 
 **Stateful Processing Details:**
-- **State Store:** RocksDB (local to Kafka Streams instance)
+- **State Backend:** RocksDB (managed by Flink)
 - **Window Type:** Tumbling, 60-second duration
-- **Grace Period:** 5 seconds (for late-arriving events)
-- **Changelog Topic:** engagement-scorer-group-student-engagement-state-changelog (auto-created)
+- **State TTL:** 10 minutes (cleanup old student states)
+- **Checkpointing:** 60-second interval, EXACTLY_ONCE mode
 
 ---
 
@@ -954,12 +994,12 @@ TTL: 3600 seconds
 └─────────────────────────────────────────┘
          │
          │ consumed by (parallel)
-         ├────────────────┬────────────────┐
-         ▼                ▼                ▼
-┌────────────┐  ┌──────────────┐  ┌──────────┐
-│  Content   │  │  Realtime    │  │ BigQuery │
-│  Adapter   │  │  Gateway     │  │   Sink   │
-└──────┬─────┘  └──────┬───────┘  └──────────┘
+         ├────────────────┐
+         ▼                ▼
+┌────────────┐  ┌──────────────┐
+│  Content   │  │  Realtime    │
+│  Adapter   │  │  Gateway     │
+└──────┬─────┘  └──────┬───────┘
        │                │
        │ 6. Fetch new   │ 7. Push via WebSocket
        │    question    │
@@ -2354,95 +2394,6 @@ TTL: 120 seconds (2 minutes)
 - Engagement Service: Feature caching
 - Tip Service: Rate limiting
 - Content Adapter: Student context lookup
-
----
-
-### 9.3 BigQuery
-
-**Responsibility:** Analytics, compliance, and event replay
-
-**Tables:**
-
-```sql
--- All Kafka topics replicated via Kafka Connect Sink
-CREATE TABLE session_events (
-    event_id STRING,
-    session_id STRING,
-    student_id STRING,
-    event_type STRING,
-    timestamp TIMESTAMP,
-    payload JSON
-) PARTITION BY DATE(timestamp);
-
-CREATE TABLE quiz_answers (
-    event_id STRING,
-    session_id STRING,
-    student_id STRING,
-    question_id STRING,
-    is_correct BOOL,
-    attempt_number INT64,
-    skill_tag STRING,
-    timestamp TIMESTAMP,
-    payload JSON
-) PARTITION BY DATE(timestamp);
-
-CREATE TABLE engagement_scores (
-    event_id STRING,
-    session_id STRING,
-    student_id STRING,
-    score FLOAT64,
-    trend STRING,
-    alert_threshold_crossed BOOL,
-    timestamp TIMESTAMP,
-    payload JSON
-) PARTITION BY DATE(timestamp);
-
-CREATE TABLE adapt_actions (
-    event_id STRING,
-    session_id STRING,
-    student_id STRING,
-    action_type STRING,
-    model_name STRING,
-    inference_latency_ms INT64,
-    timestamp TIMESTAMP,
-    payload JSON
-) PARTITION BY DATE(timestamp);
-
-CREATE TABLE instructor_tips (
-    event_id STRING,
-    session_id STRING,
-    tip_type STRING,
-    priority STRING,
-    affected_students ARRAY<STRING>,
-    timestamp TIMESTAMP,
-    payload JSON
-) PARTITION BY DATE(timestamp);
-```
-
-**Use Cases:**
-- **Analytics:** Daily engagement reports, skill gap analysis
-- **Compliance:** FERPA audit logs (all student interactions preserved)
-- **Debugging:** Replay specific session events
-- **A/B testing:** Compare bandit model versions
-
-**Kafka Connect Configuration:**
-```json
-{
-  "name": "bigquery-sink-connector",
-  "config": {
-    "connector.class": "com.wepay.kafka.connect.bigquery.BigQuerySinkConnector",
-    "topics": "session.events,quiz.answers,engagement.scores,adapt.actions,instructor.tips",
-    "project": "edupulse-prod",
-    "defaultDataset": "kafka_events",
-    "autoCreateTables": true,
-    "sanitizeTopics": true,
-    "key.converter": "io.confluent.connect.avro.AvroConverter",
-    "value.converter": "io.confluent.connect.avro.AvroConverter",
-    "key.converter.schema.registry.url": "${SCHEMA_REGISTRY_URL}",
-    "value.converter.schema.registry.url": "${SCHEMA_REGISTRY_URL}"
-  }
-}
-```
 
 ---
 
