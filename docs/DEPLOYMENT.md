@@ -26,7 +26,9 @@ Complete deployment guide for the EduPulse real-time adaptive learning platform 
 
 ### Architecture Summary
 
-EduPulse uses a **fully event-driven architecture** with managed services:
+EduPulse uses a **fully event-driven architecture** with managed services and strict separation of concerns:
+
+**Key Principle**: Flink does ALL real-time computation. Realtime Gateway does ONLY fan-out and SSE delivery.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -50,6 +52,9 @@ EduPulse uses a **fully event-driven architecture** with managed services:
 │  │ Artifact        │  │ Secret          │  │  Vertex AI   │        │
 │  │ Registry        │  │ Manager         │  │  (Bandit)    │        │
 │  └─────────────────┘  └─────────────────┘  └──────────────┘        │
+│  ┌─────────────────────────────────────────────────────────┐        │
+│  │ Memorystore (Redis) - SSE routing maps                  │        │
+│  └─────────────────────────────────────────────────────────┘        │
 │                                                                       │
 └─────────────────────────────────────────────────────────────────────┘
                                  │
@@ -59,9 +64,13 @@ EduPulse uses a **fully event-driven architecture** with managed services:
 │                         Confluent Cloud                              │
 ├─────────────────────────────────────────────────────────────────────┤
 │  ┌───────────────┐  ┌───────────────┐  ┌──────────────────┐        │
-│  │ Kafka Cluster │  │ Schema        │  │ Flink SQL        │        │
-│  │ (Topics)      │  │ Registry      │  │ (Stream Proc.)   │        │
+│  │ Kafka Cluster │  │ Schema        │  │ Confluent Flink  │        │
+│  │ Raw + Derived │  │ Registry      │  │ (ALL Compute)    │        │
+│  │ Topics        │  │ (Avro)        │  │ Stream Proc.     │        │
 │  └───────────────┘  └───────────────┘  └──────────────────┘        │
+│                                                                       │
+│  Event Flow:                                                         │
+│  Raw Events → Flink (compute) → Derived Topics → Realtime Gateway   │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -74,15 +83,19 @@ EduPulse uses a **fully event-driven architecture** with managed services:
 | **bandit-engine** | Multi-armed bandit difficulty adaptation | 8080 | Internal | 2 CPU, 1Gi | Vertex AI integration |
 | **tip-service** | AI-powered hint generation via Gemini | 8080 | Internal | 1 CPU, 512Mi | Gemini API integration |
 | **content-adapter** | Dynamic content difficulty adjustment | 8080 | Internal | 500m CPU, 256Mi | Lightweight processor |
-| **realtime-gateway** | WebSocket gateway for real-time updates | 8080 | Public | 1 CPU, 512Mi | Session affinity, min 1 instance |
+| **realtime-gateway** | SSE gateway for real-time updates (Kafka → SSE fan-out ONLY, NO computation) | 8080 | Public | 1 CPU, 512Mi | Redis-backed routing, min 1 instance |
 
 ### Confluent Cloud Managed Components
 
 **Critical**: Kafka, Schema Registry, and Flink are **fully managed by Confluent Cloud**. They are **NOT provisioned on GCP**.
 
-- **Kafka Cluster**: Event streaming backbone
+- **Kafka Cluster**: Event streaming backbone (raw + derived topics)
 - **Schema Registry**: Avro schema management and compatibility enforcement
-- **Flink**: Stream processing for real-time analytics and aggregations
+- **Confluent Flink**: **ALL** real-time stream processing, analytics, and aggregations
+  - Windowed metrics (tumbling, sliding, session windows)
+  - Stream joins (enrichment, temporal joins)
+  - Pattern detection (Complex Event Processing)
+  - Produces derived topics consumed by Realtime Gateway and microservices
 
 ### GCP Resources Managed by Terraform
 
@@ -306,7 +319,8 @@ These are set in `terraform.tfvars` and passed to Cloud Run services:
 | `VERTEX_AI_REGION`       | Vertex AI region                      | `us-central1`              |
 | `VERTEX_AI_ENDPOINT_ID`  | Vertex AI model endpoint ID           | `1234567890` (if deployed) |
 | `GEMINI_MODEL`           | Gemini model name                     | `gemini-2.0-flash-exp`     |
-| `WEBSOCKET_ENABLED`      | Enable WebSocket for realtime-gateway | `true`                     |
+| `REDIS_HOST`             | Redis host for SSE routing maps       | `10.x.x.x` (Memorystore)   |
+| `REDIS_PORT`             | Redis port                            | `6379`                     |
 
 ---
 
@@ -327,7 +341,7 @@ These are set in `terraform.tfvars` and passed to Cloud Run services:
 |----------------------|-----------------|------------------------------------------|
 | event-ingest-service | `all`           | Public internet (frontend calls)         |
 | quizzer              | `all`           | Public internet (quiz content API)       |
-| realtime-gateway     | `all`           | Public internet (WebSocket connections)  |
+| realtime-gateway     | `all`           | Public internet (SSE connections)        |
 | bandit-engine        | `internal`      | Internal only (called by other services) |
 | tip-service          | `internal`      | Internal only (called by other services) |
 | content-adapter      | `internal`      | Internal only (called by other services) |
@@ -344,15 +358,38 @@ These are set in `terraform.tfvars` and passed to Cloud Run services:
 
 Flink jobs run **in Confluent Cloud**, not on GCP. They are managed via Confluent Cloud Console or CLI.
 
+**Critical Responsibility**: Flink performs **ALL** real-time computation for EduPulse. The Realtime Gateway service does **NO** stream processing—it only fans out Flink's derived topics to SSE clients.
+
+### Real-Time Pipeline
+
+```
+Frontend → Event Ingest Service → Kafka Raw Topics
+  → Flink (compute, joins, windowing) → Kafka Derived Topics
+  → Realtime Gateway (fan-out only) → Next.js (SSE)
+```
+
+### Derived Topics Produced by Flink
+
+Flink jobs produce derived topics that are consumed by the Realtime Gateway and other microservices:
+
+| Topic Name | Produced By | Key | Purpose | Consumed By |
+|------------|-------------|-----|---------|-------------|
+| `engagement.scores` | Flink Engagement Analytics Job | `studentId` | Real-time engagement metrics per student | Realtime Gateway, Bandit Engine |
+| `decision.context` | Flink Engagement Analytics Job | `sessionId` | Enriched context for AI decision-making | Bandit Engine, Tip Service |
+| `cohort.heatmap` | Flink Instructor Metrics Job | `cohortId` | Aggregated cohort performance heatmap data | Realtime Gateway |
+| `instructor.tips` | Flink Instructor Metrics Job | `cohortId` or `studentId` | Coaching suggestions for instructors | Realtime Gateway |
+
+**Note**: `adapt.actions` is produced by Bandit Engine (not Flink), which consumes `decision.context`.
+
 ### Flink SQL Statements Location
 
 Store Flink SQL definitions in the repository:
 
 ```
 infra/confluent/flink/
-├── engagement_aggregation.sql    # Real-time engagement scoring
-├── difficulty_adjustment.sql     # Adaptive difficulty logic
-├── instructor_tips.sql           # Coaching suggestion triggers
+├── engagement_aggregation.sql    # Real-time engagement scoring, produces engagement.scores
+├── decision_context.sql          # Enriched decision context, produces decision.context
+├── instructor_metrics.sql        # Cohort aggregates and tips, produces cohort.heatmap + instructor.tips
 └── README.md                     # Deployment instructions
 ```
 
@@ -400,14 +437,14 @@ confluent kafka topic list
 confluent kafka topic consume engagement.scores --from-beginning
 ```
 
-### Flink Topics
+### Flink Job Data Flow
 
-| Input Topic         | Flink Job                | Output Topic        |
-|---------------------|--------------------------|---------------------|
-| `quiz.answers`      | Engagement aggregation   | `engagement.scores` |
-| `session.events`    | Behavioral analysis      | `engagement.scores` |
-| `engagement.scores` | Difficulty adjustment    | `adapt.actions`     |
-| `quiz.answers`      | Hint generation triggers | `instructor.tips`   |
+| Flink Job | Input Topics | Output Topics | Computation |
+|-----------|-------------|---------------|-------------|
+| Engagement Analytics Job | `quiz.answers`, `session.events` | `engagement.scores`, `decision.context` | 60-sec tumbling windows, pattern detection, enrichment joins |
+| Instructor Metrics Job | `engagement.scores`, `quiz.answers` | `cohort.heatmap`, `instructor.tips` | 5-min sliding windows, cohort aggregates, skill-level analysis |
+
+**Note**: `adapt.actions` is produced by the **Bandit Engine microservice** (not Flink), which consumes `decision.context` from Flink.
 
 ---
 
@@ -813,19 +850,38 @@ curl -H "Authorization: Bearer $(gcloud auth print-identity-token)" \
 gcloud run services logs read tip-service --region us-central1 --limit 50
 ```
 
-#### 6. UI Real-Time Updates Work
+#### 6. UI Real-Time Updates Work (SSE)
 
-**Test WebSocket connection**:
+**Test SSE connection**:
 
 ```bash
 # Get realtime-gateway URL
 GATEWAY_URL=$(gcloud run services describe realtime-gateway --region us-central1 --format='value(status.url)')
 
-# Test WebSocket endpoint (requires WebSocket client)
-wscat -c $GATEWAY_URL/ws/updates
+# Test SSE endpoint
+curl -N -H "Accept: text/event-stream" $GATEWAY_URL/sse/student/test-student-123
+
+# Or use JavaScript EventSource (in browser console or Node.js)
+# const es = new EventSource('https://<gateway-url>/sse/student/alice');
+# es.addEventListener('engagement', (e) => console.log(e.data));
 ```
 
-**Send test event and verify WebSocket receives it**.
+**Send test event via Event Ingest Service and verify SSE receives it**:
+
+```bash
+# Submit a test quiz answer
+curl -X POST $EVENT_INGEST_URL/api/quiz/answer \
+  -H "Content-Type: application/json" \
+  -d '{
+    "studentId": "test-student-123",
+    "questionId": "q1",
+    "answer": "A",
+    "isCorrect": false,
+    "timeSpent": 15000
+  }'
+
+# Check if SSE connection receives engagement.scores event (within ~1 second)
+```
 
 ---
 
