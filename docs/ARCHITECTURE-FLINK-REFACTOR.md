@@ -50,9 +50,9 @@ Frontend → Event Ingest → Kafka → Flink Jobs → Kafka → Gateway → UI
 Replace the Technology Stack section in README.md:
 
 **Technology Stack:**
-- **Backend:** Spring Boot 3.2, Java 17
+- **Backend:** Spring Boot 3.5, Java 21
 - **Stream Processing:** Apache Flink 1.18+
-- **Frontend:** Next.js 14, React 18, TypeScript
+- **Frontend:** Next.js 15, React 19, TypeScript
 - **Messaging:** Confluent Kafka, Schema Registry, Avro
 - **AI/ML:** Vertex AI, Google Gemini
 - **Data:** PostgreSQL, Redis
@@ -142,20 +142,20 @@ Replace the Architecture section in README.md (lines 42-67):
 
 ### Job 1: Engagement Analytics Job
 
-| **Aspect** | **Details** |
-|------------|-------------|
-| **Job Name** | `engagement-analytics-job` |
-| **Purpose** | Compute real-time engagement scores, detect disengagement patterns, trigger alerts |
-| **Input Topics** | `quiz.answers`, `session.events` |
-| **Output Topics** | `engagement.scores` |
-| **Keying Strategy** | Keyed by `studentId` for stateful aggregation |
-| **Windowing Strategy** | Tumbling window: 60 seconds (aligned with original design) |
-| **State Kept** | Per-student aggregation state: <br>• Total attempts in window<br>• Correct/incorrect counts<br>• Dwell time accumulator<br>• Question IDs seen<br>• Last 3 answer timestamps (for pacing)<br>State TTL: 10 minutes |
-| **Joins/Enrichment** | Left join with question metadata (from compacted `content.questions` topic) to get difficulty level, skill tags |
-| **Pattern Detection** | CEP patterns:<br>• **Rapid Guessing:** 3+ answers in <15s with <40% accuracy<br>• **Engagement Collapse:** Score drops >0.3 within 2 consecutive windows<br>• **Idle Spike:** >120s gap between answers (session.events dwell timeout) |
-| **Scoring Formula** | `score = 0.3 * dwellScore + 0.4 * accuracyScore + 0.3 * pacingScore`<br>Alert threshold: `score < 0.4 && trend == DECLINING` |
-| **Delivery Guarantees** | Exactly-once (Flink checkpointing + Kafka transactional producer) |
-| **Checkpoint Interval** | 60 seconds (aligned with window size) |
+| **Aspect**              | **Details**                                                                                                                                                                                                                            |
+|-------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Job Name**            | `engagement-analytics-job`                                                                                                                                                                                                             |
+| **Purpose**             | Compute real-time engagement scores, detect disengagement patterns, trigger alerts                                                                                                                                                     |
+| **Input Topics**        | `quiz.answers`, `session.events`                                                                                                                                                                                                       |
+| **Output Topics**       | `engagement.scores`                                                                                                                                                                                                                    |
+| **Keying Strategy**     | Keyed by `studentId` for stateful aggregation                                                                                                                                                                                          |
+| **Windowing Strategy**  | Tumbling window: 60 seconds (aligned with original design)                                                                                                                                                                             |
+| **State Kept**          | Per-student aggregation state: <br>• Total attempts in window<br>• Correct/incorrect counts<br>• Dwell time accumulator<br>• Question IDs seen<br>• Last 3 answer timestamps (for pacing)<br>State TTL: 10 minutes                     |
+| **Joins/Enrichment**    | Left join with question metadata (from compacted `content.questions` topic) to get difficulty level, skill tags                                                                                                                        |
+| **Pattern Detection**   | CEP patterns:<br>• **Rapid Guessing:** 3+ answers in <15s with <40% accuracy<br>• **Engagement Collapse:** Score drops >0.3 within 2 consecutive windows<br>• **Idle Spike:** >120s gap between answers (session.events dwell timeout) |
+| **Scoring Formula**     | `score = 0.3 * dwellScore + 0.4 * accuracyScore + 0.3 * pacingScore`<br>Alert threshold: `score < 0.4 && trend == DECLINING`                                                                                                           |
+| **Delivery Guarantees** | Exactly-once (Flink checkpointing + Kafka transactional producer)                                                                                                                                                                      |
+| **Checkpoint Interval** | 60 seconds (aligned with window size)                                                                                                                                                                                                  |
 
 **Output Schema (`engagement.scores-value`):**
 ```json
@@ -182,19 +182,19 @@ Replace the Architecture section in README.md (lines 42-67):
 
 ### Job 2: Instructor Metrics Job
 
-| **Aspect** | **Details** |
-|------------|-------------|
-| **Job Name** | `instructor-metrics-job` |
-| **Purpose** | Aggregate cohort-level metrics, generate heatmap data, detect skill-level struggles |
-| **Input Topics** | `engagement.scores`, `quiz.answers` |
-| **Output Topics** | `cohort.metrics`, `instructor.tips` |
-| **Keying Strategy** | Multi-key:<br>• `cohortId` for aggregate metrics<br>• `skillTag` for skill-level insights<br>• `sessionId` for session-scoped tips |
-| **Windowing Strategy** | Sliding window: 5 minutes, slide 1 minute (for smooth updates) |
-| **State Kept** | Per-cohort/skill aggregation state:<br>• Student count by engagement band (high/medium/low)<br>• Skill tag → struggle count map<br>• Recent tip emission timestamps (for rate limiting)<br>State TTL: 30 minutes |
-| **Joins/Enrichment** | Join `engagement.scores` with `quiz.answers` on `studentId` + `timestamp` to correlate low scores with specific question difficulties and skill tags |
-| **Pattern Detection** | Cohort patterns:<br>• **Mass Struggle:** >50% of cohort with score <0.5 on same skill<br>• **Skill Bottleneck:** >3 students failing same question in <2 minutes<br>Output triggers tip generation (consumed by Tip Service) |
-| **Delivery Guarantees** | At-least-once (acceptable for dashboard metrics; idempotent consumption in Gateway) |
-| **Checkpoint Interval** | 30 seconds |
+| **Aspect**              | **Details**                                                                                                                                                                                                                  |
+|-------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Job Name**            | `instructor-metrics-job`                                                                                                                                                                                                     |
+| **Purpose**             | Aggregate cohort-level metrics, generate heatmap data, detect skill-level struggles                                                                                                                                          |
+| **Input Topics**        | `engagement.scores`, `quiz.answers`                                                                                                                                                                                          |
+| **Output Topics**       | `cohort.metrics`, `instructor.tips`                                                                                                                                                                                          |
+| **Keying Strategy**     | Multi-key:<br>• `cohortId` for aggregate metrics<br>• `skillTag` for skill-level insights<br>• `sessionId` for session-scoped tips                                                                                           |
+| **Windowing Strategy**  | Sliding window: 5 minutes, slide 1 minute (for smooth updates)                                                                                                                                                               |
+| **State Kept**          | Per-cohort/skill aggregation state:<br>• Student count by engagement band (high/medium/low)<br>• Skill tag → struggle count map<br>• Recent tip emission timestamps (for rate limiting)<br>State TTL: 30 minutes             |
+| **Joins/Enrichment**    | Join `engagement.scores` with `quiz.answers` on `studentId` + `timestamp` to correlate low scores with specific question difficulties and skill tags                                                                         |
+| **Pattern Detection**   | Cohort patterns:<br>• **Mass Struggle:** >50% of cohort with score <0.5 on same skill<br>• **Skill Bottleneck:** >3 students failing same question in <2 minutes<br>Output triggers tip generation (consumed by Tip Service) |
+| **Delivery Guarantees** | At-least-once (acceptable for dashboard metrics; idempotent consumption in Gateway)                                                                                                                                          |
+| **Checkpoint Interval** | 30 seconds                                                                                                                                                                                                                   |
 
 **Output Schema (`cohort.metrics-value`):**
 ```json

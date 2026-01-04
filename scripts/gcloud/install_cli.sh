@@ -11,6 +11,3 @@ echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.clou
 
 # Update and install the gcloud CLI
 sudo apt-get update && sudo apt-get install google-cloud-cli -y
-
-# Login without browser launch (key for WSL)
-gcloud auth login --no-launch-browser

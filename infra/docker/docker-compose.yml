@@ -1,3 +1,4 @@
+name: ${COMPOSE_PROJECT_NAME}
 services:
   quizzer:
     image: macchiato23/quizzer:0.0.2-SNAPSHOT
@@ -28,16 +29,13 @@ services:
       KAFKA_LOG_DIRS: /var/lib/kafka/data
     volumes:
       - kafka-1-data:/var/lib/kafka/data
-      - ./properties/server.properties:/opt/kafka/config/server.properties
-      - ../scripts/postgres:/docker-entrypoint-initdb.d
+      - ./kafka/server.properties:/opt/kafka/config/server.properties
     networks:
       - kafka-net
     restart: unless-stopped
 
   postgres:
     image: postgres
-    env_file:
-      - ../backend/event-ingest-service/.env
     environment:
       POSTGRES_USER: ${DATABASE_USER:-default}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-password}
@@ -45,7 +43,7 @@ services:
       PGDATA: /data/postgres
     volumes:
       - postgres:/data/postgres
-      - ./scripts:/docker-entrypoint-initdb.d
+      - ./postgres:/docker-entrypoint-initdb.d
     ports:
       - '${DATABASE_PORT:-5432}:5432'
     networks:

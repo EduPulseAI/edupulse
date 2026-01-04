@@ -1,0 +1,1 @@
+{"Modules":[{"Key":"","Source":"","Dir":"."},{"Key":"artifact_registry","Source":"../../modules/artifact_registry","Dir":"../../modules/artifact_registry"},{"Key":"iam","Source":"../../modules/iam","Dir":"../../modules/iam"},{"Key":"secret_manager","Source":"../../modules/secret_manager","Dir":"../../modules/secret_manager"}]}
