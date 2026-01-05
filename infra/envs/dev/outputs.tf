@@ -121,6 +121,35 @@ output "docker_build_commands" {
 }
 
 # -----------------------------------------------------------------------------
+# Vertex AI Outputs
+# -----------------------------------------------------------------------------
+
+output "vertex_ai_enabled" {
+  description = "Whether Vertex AI is enabled for this environment"
+  value       = var.enable_vertex_ai
+}
+
+output "vertex_ai_service_accounts" {
+  description = "Service accounts with Vertex AI access"
+  value       = var.enable_vertex_ai ? module.vertex_ai[0].service_accounts_with_access : []
+}
+
+output "vertex_ai_endpoint_format" {
+  description = "Format for Vertex AI endpoint URLs"
+  value       = var.enable_vertex_ai ? module.vertex_ai[0].vertex_ai_endpoint_format : null
+}
+
+output "vertex_ai_iam_roles" {
+  description = "Summary of IAM roles granted for Vertex AI"
+  value       = var.enable_vertex_ai ? module.vertex_ai[0].iam_roles_granted : {}
+}
+
+output "vertex_ai_enabled_apis" {
+  description = "List of Vertex AI APIs that were enabled"
+  value       = var.enable_vertex_ai ? module.vertex_ai[0].enabled_apis : []
+}
+
+# -----------------------------------------------------------------------------
 # Next Steps
 # -----------------------------------------------------------------------------
 
@@ -179,6 +208,7 @@ output "next_steps" {
   7. Test Kafka connectivity from event-ingest-service:
      curl -X POST https://YOUR_SERVICE_URL/actuator/health
 
+  ${var.enable_vertex_ai ? "8. Configure Vertex AI for bandit-engine (if using AI features):\n     # Deploy a model endpoint or use pre-trained model\n     gcloud ai endpoints list --project=${var.project_id} --region=${var.region}\n     \n     # Update bandit-engine environment variable with endpoint ID:\n     VERTEX_AI_ENDPOINT_ID=your-endpoint-id\n" : ""}
   ====================================================================
   EOT
 }

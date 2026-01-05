@@ -81,9 +81,14 @@ services = {
     timeout       = 60
     ingress       = "INGRESS_TRAFFIC_ALL"
     env_vars = {
-      SPRING_PROFILES_ACTIVE        = "dev"
+      SPRING_PROFILES_ACTIVE        = "prod"
       SERVER_PORT                   = "8080"
       LOGGING_LEVEL_ROOT            = "INFO"
+      # Vertex AI Gemini Configuration
+      GCP_PROJECT_ID                = "edupulse-483220"
+      GCP_REGION                    = "us-central1"
+      GEMINI_MODEL                  = "gemini-1.5-flash"
+      # VERTEX_AI_CREDENTIALS_URI is not set - uses ADC (Application Default Credentials)
     }
     secret_env_vars = {
       DATABASE_USER = {

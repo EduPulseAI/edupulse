@@ -89,9 +89,9 @@ locals {
         secret_config.secret_name
       ]
 
-      # Enable Vertex AI for bandit-engine
-      enable_vertex_ai            = service_name == "bandit-engine" && var.enable_vertex_ai
-      enable_vertex_ai_prediction = service_name == "bandit-engine" && var.enable_vertex_ai
+      # Enable Vertex AI for services that need it
+      enable_vertex_ai            = contains(["quizzer", "bandit-engine", "tip-service"], service_name) && var.enable_vertex_ai
+      enable_vertex_ai_prediction = contains(["quizzer", "bandit-engine", "tip-service"], service_name) && var.enable_vertex_ai
 
       # Enable Artifact Registry pull (optional, Cloud Run handles this automatically)
       enable_artifact_registry_pull = false
@@ -128,6 +128,47 @@ module "iam" {
 
 data "google_project" "project" {
   project_id = var.project_id
+}
+
+# -----------------------------------------------------------------------------
+# Vertex AI
+# Enable Vertex AI APIs and configure IAM for AI-powered features
+# -----------------------------------------------------------------------------
+
+module "vertex_ai" {
+  source = "../../modules/vertex_ai"
+  count  = var.enable_vertex_ai ? 1 : 0
+
+  project_id = var.project_id
+  region     = var.region
+
+  # Enable APIs via this module
+  enable_apis    = true
+  apis_to_enable = var.vertex_ai_apis
+
+  # Grant Vertex AI User role to service accounts that need it
+  # Only include service accounts that are actually deployed
+  # Use service account emails directly from IAM module (computed)
+  service_account_emails = [
+    for service_name in ["quizzer", "bandit-engine", "tip-service"] :
+    "${service_name}-sa@${var.project_id}.iam.gserviceaccount.com"
+    if contains(keys(var.services), service_name)
+  ]
+
+  # Enable default GCP-managed service agent for Vertex AI
+  enable_default_service_agent = true
+
+  # Optional: Enable logging and monitoring for Vertex AI operations
+  enable_logging_permissions    = true
+  enable_monitoring_permissions = true
+
+  # Labels
+  labels = local.common_labels
+
+  depends_on = [
+    google_project_service.required_apis,
+    module.iam
+  ]
 }
 
 # -----------------------------------------------------------------------------
