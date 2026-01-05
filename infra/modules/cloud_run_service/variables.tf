@@ -129,10 +129,10 @@ variable "timeout" {
 variable "ingress" {
   description = "Ingress setting (all, internal, internal-and-cloud-load-balancing)"
   type        = string
-  default     = "all"
+  default     = "INGRESS_TRAFFIC_ALL"
 
   validation {
-    condition     = contains(["INGRESS_TRAFFIC_ALL", "INGRESS_TRAFFIC_INTERNAL_ONLY", "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER", "all", "internal", "internal-and-cloud-load-balancing"], var.ingress)
+    condition     = contains(["INGRESS_TRAFFIC_ALL", "INGRESS_TRAFFIC_INTERNAL_ONLY", "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"], var.ingress)
     error_message = "Ingress must be one of: all, internal, internal-and-cloud-load-balancing."
   }
 }

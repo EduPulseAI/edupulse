@@ -35,13 +35,13 @@ resource "google_secret_manager_secret" "secrets" {
   }
 
   # Optional: Set expiration time for secrets
-  dynamic "rotation" {
-    for_each = try(each.value.rotation_period, null) != null ? [1] : []
-    content {
-      rotation_period = each.value.rotation_period
-      next_rotation_time = try(each.value.next_rotation_time, null)
-    }
-  }
+  # dynamic "rotation" {
+  #   for_each = try(each.value.rotation_period, null) != null ? [1] : []
+  #   content {
+  #     rotation_period = each.value.rotation_period
+  #     next_rotation_time = try(each.value.next_rotation_time, null)
+  #   }
+  # }
 
   depends_on = [
     google_project_service.secretmanager_api

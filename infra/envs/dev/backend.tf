@@ -18,7 +18,7 @@ terraform {
   backend "gcs" {
     # Replace <PROJECT_ID> with your actual GCP project ID
     # bucket = "<PROJECT_ID>-terraform-state-dev"
-    bucket = "REPLACE_WITH_PROJECT_ID-terraform-state-dev"
+    bucket = "edupulse-483220-terraform-state-dev"
     prefix = "edupulse/dev"
 
     # Optional: Enable state locking (requires Cloud Storage admin permission)
