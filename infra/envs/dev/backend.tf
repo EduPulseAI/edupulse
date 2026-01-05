@@ -14,23 +14,23 @@
 # 2. Run: terraform init -migrate-state
 # 3. State will be stored in terraform.tfstate locally
 
-terraform {
-  backend "gcs" {
-    # Replace <PROJECT_ID> with your actual GCP project ID
-    # bucket = "<PROJECT_ID>-terraform-state-dev"
-    bucket = "edupulse-483220-terraform-state-dev"
-    prefix = "edupulse/dev"
-
-    # Optional: Enable state locking (requires Cloud Storage admin permission)
-    # State locking prevents concurrent terraform runs from corrupting state
-    # This is enabled by default with GCS backend
-  }
-}
+# terraform {
+#   backend "gcs" {
+#     # Replace <PROJECT_ID> with your actual GCP project ID
+#     # bucket = "<PROJECT_ID>-terraform-state-dev"
+#     bucket = "edupulse-483220-terraform-state-dev"
+#     prefix = "edupulse/dev"
+#
+#     # Optional: Enable state locking (requires Cloud Storage admin permission)
+#     # State locking prevents concurrent terraform runs from corrupting state
+#     # This is enabled by default with GCS backend
+#   }
+# }
 
 # Alternative: Local backend (for testing only)
 # Uncomment this and comment out the GCS backend above
-# terraform {
-#   backend "local" {
-#     path = "terraform.tfstate"
-#   }
-# }
+terraform {
+  backend "local" {
+    path = "terraform.tfstate"
+  }
+}

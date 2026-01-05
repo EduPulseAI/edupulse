@@ -38,5 +38,12 @@ build/
 ### Mac OS ###
 .DS_Store
 
+### ###
+CLAUDE.md
+
 .env*
 !.env.example
+
+### Terraform ###
+.terraform*
+tfplan

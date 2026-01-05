@@ -84,8 +84,6 @@ services = {
       SPRING_PROFILES_ACTIVE        = "dev"
       SERVER_PORT                   = "8080"
       LOGGING_LEVEL_ROOT            = "INFO"
-      DATABASE_HOST                 = "postgres"
-      SPRING_JPA_HIBERNATE_DDL_AUTO = "update"
     }
     secret_env_vars = {
       DATABASE_USER = {
@@ -100,188 +98,192 @@ services = {
         secret_name = "postgres-database"
         version     = "latest"
       }
-    }
-  }
-
-  bandit-engine = {
-    image_name    = "bandit-engine"
-    image_tag     = "latest"
-    port          = 8080
-    cpu           = "2000m"
-    memory        = "1Gi"
-    min_instances = 0
-    max_instances = 5
-    concurrency   = 40
-    timeout       = 120
-    ingress       = "INGRESS_TRAFFIC_INTERNAL_ONLY"
-    env_vars = {
-      SPRING_PROFILES_ACTIVE = "dev"
-      SERVER_PORT            = "8080"
-      VERTEX_AI_PROJECT      = "edupulse-dev-REPLACEME"
-      VERTEX_AI_REGION       = "us-central1"
-    }
-    secret_env_vars = {
-      KAFKA_BOOTSTRAP_SERVERS = {
-        secret_name = "kafka-bootstrap-servers"
-        version     = "latest"
-      }
-      KAFKA_API_KEY = {
-        secret_name = "kafka-api-key"
-        version     = "latest"
-      }
-      KAFKA_API_SECRET = {
-        secret_name = "kafka-api-secret"
-        version     = "latest"
-      }
-      SCHEMA_REGISTRY_URL = {
-        secret_name = "schema-registry-url"
-        version     = "latest"
-      }
-      SCHEMA_REGISTRY_API_KEY = {
-        secret_name = "schema-registry-api-key"
-        version     = "latest"
-      }
-      SCHEMA_REGISTRY_API_SECRET = {
-        secret_name = "schema-registry-api-secret"
+      DATABASE_HOST = {
+        secret_name = "postgres-host"
         version     = "latest"
       }
     }
   }
 
-  tip-service = {
-    image_name    = "tip-service"
-    image_tag     = "latest"
-    port          = 8080
-    cpu           = "1000m"
-    memory        = "512Mi"
-    min_instances = 0
-    max_instances = 5
-    concurrency   = 40
-    timeout       = 90
-    ingress       = "INGRESS_TRAFFIC_INTERNAL_ONLY"
-    env_vars = {
-      SPRING_PROFILES_ACTIVE = "dev"
-      SERVER_PORT            = "8080"
-      GEMINI_MODEL           = "gemini-2.0-flash-exp"
-    }
-    secret_env_vars = {
-      KAFKA_BOOTSTRAP_SERVERS = {
-        secret_name = "kafka-bootstrap-servers"
-        version     = "latest"
-      }
-      KAFKA_API_KEY = {
-        secret_name = "kafka-api-key"
-        version     = "latest"
-      }
-      KAFKA_API_SECRET = {
-        secret_name = "kafka-api-secret"
-        version     = "latest"
-      }
-      SCHEMA_REGISTRY_URL = {
-        secret_name = "schema-registry-url"
-        version     = "latest"
-      }
-      SCHEMA_REGISTRY_API_KEY = {
-        secret_name = "schema-registry-api-key"
-        version     = "latest"
-      }
-      SCHEMA_REGISTRY_API_SECRET = {
-        secret_name = "schema-registry-api-secret"
-        version     = "latest"
-      }
-      GEMINI_API_KEY = {
-        secret_name = "gemini-api-key"
-        version     = "latest"
-      }
-    }
-  }
-
-  content-adapter = {
-    image_name    = "content-adapter"
-    image_tag     = "latest"
-    port          = 8080
-    cpu           = "500m"
-    memory        = "256Mi"
-    min_instances = 0
-    max_instances = 10
-    concurrency   = 80
-    timeout       = 60
-    ingress       = "INGRESS_TRAFFIC_INTERNAL_ONLY"
-    env_vars = {
-      SPRING_PROFILES_ACTIVE = "dev"
-      SERVER_PORT            = "8080"
-    }
-    secret_env_vars = {
-      KAFKA_BOOTSTRAP_SERVERS = {
-        secret_name = "kafka-bootstrap-servers"
-        version     = "latest"
-      }
-      KAFKA_API_KEY = {
-        secret_name = "kafka-api-key"
-        version     = "latest"
-      }
-      KAFKA_API_SECRET = {
-        secret_name = "kafka-api-secret"
-        version     = "latest"
-      }
-      SCHEMA_REGISTRY_URL = {
-        secret_name = "schema-registry-url"
-        version     = "latest"
-      }
-      SCHEMA_REGISTRY_API_KEY = {
-        secret_name = "schema-registry-api-key"
-        version     = "latest"
-      }
-      SCHEMA_REGISTRY_API_SECRET = {
-        secret_name = "schema-registry-api-secret"
-        version     = "latest"
-      }
-    }
-  }
-
-  realtime-gateway = {
-    image_name    = "realtime-gateway"
-    image_tag     = "latest"
-    port          = 8080
-    cpu           = "1000m"
-    memory        = "512Mi"
-    min_instances = 1
-    max_instances = 20
-    concurrency   = 100
-    timeout       = 300
-    ingress       = "INGRESS_TRAFFIC_ALL"
-    env_vars = {
-      SPRING_PROFILES_ACTIVE = "dev"
-      SERVER_PORT            = "8080"
-      WEBSOCKET_ENABLED      = "true"
-    }
-    secret_env_vars = {
-      KAFKA_BOOTSTRAP_SERVERS = {
-        secret_name = "kafka-bootstrap-servers"
-        version     = "latest"
-      }
-      KAFKA_API_KEY = {
-        secret_name = "kafka-api-key"
-        version     = "latest"
-      }
-      KAFKA_API_SECRET = {
-        secret_name = "kafka-api-secret"
-        version     = "latest"
-      }
-      SCHEMA_REGISTRY_URL = {
-        secret_name = "schema-registry-url"
-        version     = "latest"
-      }
-      SCHEMA_REGISTRY_API_KEY = {
-        secret_name = "schema-registry-api-key"
-        version     = "latest"
-      }
-      SCHEMA_REGISTRY_API_SECRET = {
-        secret_name = "schema-registry-api-secret"
-        version     = "latest"
-      }
-    }
-  }
+  # bandit-engine = {
+  #   image_name    = "bandit-engine"
+  #   image_tag     = "latest"
+  #   port          = 8080
+  #   cpu           = "2000m"
+  #   memory        = "1Gi"
+  #   min_instances = 0
+  #   max_instances = 5
+  #   concurrency   = 40
+  #   timeout       = 120
+  #   ingress       = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+  #   env_vars = {
+  #     SPRING_PROFILES_ACTIVE = "dev"
+  #     SERVER_PORT            = "8080"
+  #     VERTEX_AI_PROJECT      = "edupulse-dev-REPLACEME"
+  #     VERTEX_AI_REGION       = "us-central1"
+  #   }
+  #   secret_env_vars = {
+  #     KAFKA_BOOTSTRAP_SERVERS = {
+  #       secret_name = "kafka-bootstrap-servers"
+  #       version     = "latest"
+  #     }
+  #     KAFKA_API_KEY = {
+  #       secret_name = "kafka-api-key"
+  #       version     = "latest"
+  #     }
+  #     KAFKA_API_SECRET = {
+  #       secret_name = "kafka-api-secret"
+  #       version     = "latest"
+  #     }
+  #     SCHEMA_REGISTRY_URL = {
+  #       secret_name = "schema-registry-url"
+  #       version     = "latest"
+  #     }
+  #     SCHEMA_REGISTRY_API_KEY = {
+  #       secret_name = "schema-registry-api-key"
+  #       version     = "latest"
+  #     }
+  #     SCHEMA_REGISTRY_API_SECRET = {
+  #       secret_name = "schema-registry-api-secret"
+  #       version     = "latest"
+  #     }
+  #   }
+  # }
+  #
+  # tip-service = {
+  #   image_name    = "tip-service"
+  #   image_tag     = "latest"
+  #   port          = 8080
+  #   cpu           = "1000m"
+  #   memory        = "512Mi"
+  #   min_instances = 0
+  #   max_instances = 5
+  #   concurrency   = 40
+  #   timeout       = 90
+  #   ingress       = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+  #   env_vars = {
+  #     SPRING_PROFILES_ACTIVE = "dev"
+  #     SERVER_PORT            = "8080"
+  #     GEMINI_MODEL           = "gemini-2.0-flash-exp"
+  #   }
+  #   secret_env_vars = {
+  #     KAFKA_BOOTSTRAP_SERVERS = {
+  #       secret_name = "kafka-bootstrap-servers"
+  #       version     = "latest"
+  #     }
+  #     KAFKA_API_KEY = {
+  #       secret_name = "kafka-api-key"
+  #       version     = "latest"
+  #     }
+  #     KAFKA_API_SECRET = {
+  #       secret_name = "kafka-api-secret"
+  #       version     = "latest"
+  #     }
+  #     SCHEMA_REGISTRY_URL = {
+  #       secret_name = "schema-registry-url"
+  #       version     = "latest"
+  #     }
+  #     SCHEMA_REGISTRY_API_KEY = {
+  #       secret_name = "schema-registry-api-key"
+  #       version     = "latest"
+  #     }
+  #     SCHEMA_REGISTRY_API_SECRET = {
+  #       secret_name = "schema-registry-api-secret"
+  #       version     = "latest"
+  #     }
+  #     GEMINI_API_KEY = {
+  #       secret_name = "gemini-api-key"
+  #       version     = "latest"
+  #     }
+  #   }
+  # }
+  #
+  # content-adapter = {
+  #   image_name    = "content-adapter"
+  #   image_tag     = "latest"
+  #   port          = 8080
+  #   cpu           = "500m"
+  #   memory        = "256Mi"
+  #   min_instances = 0
+  #   max_instances = 10
+  #   concurrency   = 80
+  #   timeout       = 60
+  #   ingress       = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+  #   env_vars = {
+  #     SPRING_PROFILES_ACTIVE = "dev"
+  #     SERVER_PORT            = "8080"
+  #   }
+  #   secret_env_vars = {
+  #     KAFKA_BOOTSTRAP_SERVERS = {
+  #       secret_name = "kafka-bootstrap-servers"
+  #       version     = "latest"
+  #     }
+  #     KAFKA_API_KEY = {
+  #       secret_name = "kafka-api-key"
+  #       version     = "latest"
+  #     }
+  #     KAFKA_API_SECRET = {
+  #       secret_name = "kafka-api-secret"
+  #       version     = "latest"
+  #     }
+  #     SCHEMA_REGISTRY_URL = {
+  #       secret_name = "schema-registry-url"
+  #       version     = "latest"
+  #     }
+  #     SCHEMA_REGISTRY_API_KEY = {
+  #       secret_name = "schema-registry-api-key"
+  #       version     = "latest"
+  #     }
+  #     SCHEMA_REGISTRY_API_SECRET = {
+  #       secret_name = "schema-registry-api-secret"
+  #       version     = "latest"
+  #     }
+  #   }
+  # }
+  #
+  # realtime-gateway = {
+  #   image_name    = "realtime-gateway"
+  #   image_tag     = "latest"
+  #   port          = 8080
+  #   cpu           = "1000m"
+  #   memory        = "512Mi"
+  #   min_instances = 1
+  #   max_instances = 20
+  #   concurrency   = 100
+  #   timeout       = 300
+  #   ingress       = "INGRESS_TRAFFIC_ALL"
+  #   env_vars = {
+  #     SPRING_PROFILES_ACTIVE = "dev"
+  #     SERVER_PORT            = "8080"
+  #     WEBSOCKET_ENABLED      = "true"
+  #   }
+  #   secret_env_vars = {
+  #     KAFKA_BOOTSTRAP_SERVERS = {
+  #       secret_name = "kafka-bootstrap-servers"
+  #       version     = "latest"
+  #     }
+  #     KAFKA_API_KEY = {
+  #       secret_name = "kafka-api-key"
+  #       version     = "latest"
+  #     }
+  #     KAFKA_API_SECRET = {
+  #       secret_name = "kafka-api-secret"
+  #       version     = "latest"
+  #     }
+  #     SCHEMA_REGISTRY_URL = {
+  #       secret_name = "schema-registry-url"
+  #       version     = "latest"
+  #     }
+  #     SCHEMA_REGISTRY_API_KEY = {
+  #       secret_name = "schema-registry-api-key"
+  #       version     = "latest"
+  #     }
+  #     SCHEMA_REGISTRY_API_SECRET = {
+  #       secret_name = "schema-registry-api-secret"
+  #       version     = "latest"
+  #     }
+  #   }
+  # }
 }
 
 allow_unauthenticated = true # Dev environment allows public access for testing
@@ -334,6 +336,10 @@ secrets = [
   {
     name        = "postgres-database"
     description = "PostgreSQL database name for quizzer service"
+  },
+  {
+    name        = "postgres-host"
+    description = "PostgreSQL database host for quizzer service"
   }
 ]
 
