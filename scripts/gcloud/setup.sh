@@ -1,4 +1,5 @@
-set -xa; source .env; set +a;
+set -xa
+source .env
 
 # Login without browser launch (key for WSL)
 gcloud auth application-default login --no-launch-browser

@@ -38,18 +38,18 @@ EduPulse is built on a **fully event-driven architecture** using Confluent Kafka
 
 ### Technology Stack
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| **Frontend** | Next.js 15, React 19, TypeScript | Student UI, Instructor Dashboard |
-| **API Gateway** | Spring Boot 3.5 (Event Ingest Service) | HTTP → Kafka producer |
-| **Messaging** | Confluent Kafka (KRaft mode) | Event streaming backbone |
-| **Stream Processing** | Confluent Flink 1.18+ | Real-time analytics, aggregations, CEP |
-| **Schema Registry** | Confluent Schema Registry | Avro schema management |
-| **Microservices** | Spring Boot 3.5, Java 21 | Business logic, AI orchestration |
-| **Realtime Delivery** | Spring MVC with SSE | Kafka → SSE fan-out |
-| **State Store** | Redis (Memorystore) | SSE connection routing maps |
-| **AI/ML** | Vertex AI, Google Gemini | Bandit model, hint generation |
-| **Deployment** | Google Cloud Run, Confluent Cloud | Serverless containers, managed Kafka |
+| Layer                 | Technology                             | Purpose                                |
+|-----------------------|----------------------------------------|----------------------------------------|
+| **Frontend**          | Next.js 15, React 19, TypeScript       | Student UI, Instructor Dashboard       |
+| **API Gateway**       | Spring Boot 3.5 (Event Ingest Service) | HTTP → Kafka producer                  |
+| **Messaging**         | Confluent Kafka (KRaft mode)           | Event streaming backbone               |
+| **Stream Processing** | Confluent Flink 1.18+                  | Real-time analytics, aggregations, CEP |
+| **Schema Registry**   | Confluent Schema Registry              | Avro schema management                 |
+| **Microservices**     | Spring Boot 3.5, Java 21               | Business logic, AI orchestration       |
+| **Realtime Delivery** | Spring MVC with SSE                    | Kafka → SSE fan-out                    |
+| **State Store**       | Redis (Memorystore)                    | SSE connection routing maps            |
+| **AI/ML**             | Vertex AI, Google Gemini               | Bandit model, hint generation          |
+| **Deployment**        | Google Cloud Run, Confluent Cloud      | Serverless containers, managed Kafka   |
 
 ---
 
@@ -167,15 +167,15 @@ EduPulse is built on a **fully event-driven architecture** using Confluent Kafka
 
 ### Why SSE over WebSockets?
 
-| Feature | SSE | WebSockets |
-|---------|-----|------------|
-| **Direction** | One-way (server → client) | Bi-directional |
-| **Protocol** | HTTP (chunked transfer) | Custom protocol over HTTP |
-| **Browser Support** | Native (`EventSource` API) | Native (`WebSocket` API) |
-| **Reconnection** | Automatic browser retry | Manual implementation needed |
-| **Firewall/Proxy** | HTTP-friendly | May require configuration |
-| **Overhead** | Lower (no handshake) | Higher (handshake protocol) |
-| **Use Case** | Real-time push notifications | Chat, gaming, collaborative editing |
+| Feature             | SSE                          | WebSockets                          |
+|---------------------|------------------------------|-------------------------------------|
+| **Direction**       | One-way (server → client)    | Bi-directional                      |
+| **Protocol**        | HTTP (chunked transfer)      | Custom protocol over HTTP           |
+| **Browser Support** | Native (`EventSource` API)   | Native (`WebSocket` API)            |
+| **Reconnection**    | Automatic browser retry      | Manual implementation needed        |
+| **Firewall/Proxy**  | HTTP-friendly                | May require configuration           |
+| **Overhead**        | Lower (no handshake)         | Higher (handshake protocol)         |
+| **Use Case**        | Real-time push notifications | Chat, gaming, collaborative editing |
 
 **EduPulse Choice**: SSE is perfect for our use case (server-to-client real-time updates). We don't need bi-directional communication since clients send events via REST API, not WebSocket.
 

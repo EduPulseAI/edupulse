@@ -19,9 +19,11 @@
 
 ## Overview
 
-EduPulse is a real-time adaptive learning platform that detects student disengagement and intervenes during active learning sessions using AI-driven decision-making powered by Confluent Kafka.
+EduPulse is a real-time adaptive learning platform that detects student disengagement and intervenes during active
+learning sessions using AI-driven decision-making powered by Confluent Kafka.
 
 **Key Features:**
+
 - Real-time engagement scoring from student interactions
 - AI-powered difficulty adjustment (Vertex AI multi-armed bandit)
 - Contextual hint generation (Google Gemini)
@@ -30,6 +32,7 @@ EduPulse is a real-time adaptive learning platform that detects student disengag
 - Strict schema governance with Avro and Confluent Schema Registry
 
 **Technology Stack:**
+
 - **Backend:** Spring Boot 3.5, Java 21
 - **Stream Processing:** Apache Flink 1.18+
 - **Frontend:** Next.js 15, React 19, TypeScript
@@ -45,29 +48,71 @@ EduPulse is a real-time adaptive learning platform that detects student disengag
 ### High-Level Architecture
 
 ```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                            Frontend Layer                               │
+│  ┌──────────────────────────────┐  ┌─────────────────────────────────┐  │
+│  │  Student Learning UI         │  │  Instructor Dashboard           │  │
+│  │  (Next.js)                   │  │  (Next.js)                      │  │
+│  │  - Question display          │  │  - Engagement heatmap           │  │
+│  │  - Answer submission         │  │  - Real-time tips panel         │  │
+│  │  - Hint rendering            │  │  - Student drill-down           │  │
+│  └──────────────┬───────────────┘  └──────────────┬──────────────────┘  │
+│                 │                                 │                     │
+└─────────────────┼─────────────────────────────────┼─────────────────────┘
+                  │ SSE (Server-Sent Events)        │
+                  ▼                                 ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    Frontend (Next.js)                       │
-│  Student UI              │          Instructor Dashboard    │
-└────────────┬─────────────┴──────────────────┬──────────────┘
-             │ SSE (Server-Sent Events)        │
-             ▼                                 ▼
-┌────────────────────────────────────────────────────────────┐
-│              Realtime Gateway Service                       │
-│         (Kafka Consumer → SSE Fan-out ONLY)                 │
-│  • Consumes derived topics from Flink                       │
+│          Realtime Gateway (Spring Boot MVC)                 │
+|          (Kafka Consumer → SSE Fan-out ONLY)                │
+│  • Consumes derived topics                                  │
 │  • Routes by sessionId/studentId/cohortId                   │
-│  • NO stream processing or computation                      │
-└────────────┬───────────────────────────────────────────────┘
-             │
-             ▼
+│                                                             │
+│  ┌───────────────────────────────────────────────────┐      │
+│  │ RealtimeEventConsumer (Kafka Consumer)            │      │
+│  │ @KafkaListener                                    │      │
+│  │  - Consumes: engagement.scores, adapt.actions     │      │
+│  │  - Deserializes: Avro → Java POJO                 │      │
+│  └───────────┬───────────────────────────────────────┘      │
+│              │                                              │
+│              ▼                                              │
+│  ┌───────────────────────────────────────────────────┐      │
+│  │ EventBroadcaster (Internal Publisher)             │      │
+│  │  - Routes events by studentId/instructorId        │      │
+│  │  - Converts Avro → JSON-safe DTO                  │      │
+│  │  - Publishes to SseEmitterManager                 │      │
+│  └───────────┬───────────────────────────────────────┘      │
+│              │                                              │
+│              ▼                                              │
+│  ┌───────────────────────────────────────────────────┐      │
+│  │ SseEmitterManager (Connection Registry)           │      │
+│  │  - Map<String, SseEmitter> studentEmitters        │      │
+│  │  - Map<String, SseEmitter> instructorEmitters     │      │
+│  │  - Handles timeouts, cleanup                      │      │
+│  └───────────┬───────────────────────────────────────┘      │
+│              │                                              │
+└──────────────┼──────────────────────────────────────────────┘
+               │
+               ▼
+    ┌──────────────────────────────────────┐
+    │  SSE Endpoints                       │
+    │  GET /sse/student/{studentId}        │
+    │  GET /sse/instructor/{instructorId}  │
+    └──────────────┬───────────────────────┘
+                   │ HTTP/1.1 chunked transfer
+                   ▼
+    ┌──────────────────────────────────────┐
+    │  Browser (EventSource)               │
+    │  - Next.js React Hook                │
+    │  - Auto-reconnect on disconnect      │
+    └──────────────────────────────────────┘
 ┌────────────────────────────────────────────────────────────┐
-│               Confluent Kafka Cluster                       │
-│  Raw Topics: quiz.answers, session.events                   │
-│  Derived Topics: engagement.scores, adapt.actions,          │
-│                  instructor.tips, cohort.heatmap,           │
-│                  decision.context                           │
-│  (Schema Registry enforces Avro schemas - BACKWARD compat)  │
-└─────┬────────────────────────────────┬────────────────────┘
+│               Confluent Kafka Cluster                      │
+│  Raw Topics: quiz.answers, session.events                  │
+│  Derived Topics: engagement.scores, adapt.actions,         │
+│                  instructor.tips, cohort.heatmap,          │
+│                  decision.context                          │
+│  (Schema Registry enforces Avro schemas - BACKWARD compat) │
+└─────┬────────────────────────────────┬─────────────────────┘
       │                                │
       │  ┌─────────────────────────────▼────────────────────┐
       │  │    Confluent Flink (Managed Stream Processing)   │
@@ -100,11 +145,12 @@ EduPulse is a real-time adaptive learning platform that detects student disengag
 EduPulse uses a **strict separation of concerns** for real-time data processing:
 
 **Event Flow:**
+
 ```
 Raw Events (Frontend)
   → Event Ingest Service
   → Kafka Raw Topics
-  → Flink Stream Processing (compute, joins, windowing)
+  → Kafka Stream Processing (compute, joins, windowing)
   → Kafka Derived Topics
   → Realtime Gateway (fan-out only)
   → Next.js Frontend (SSE)
@@ -113,50 +159,52 @@ Raw Events (Frontend)
 **Responsibilities:**
 
 1. **Flink (Confluent Managed)**: ALL real-time computation
-   - Windowed aggregations (tumbling, sliding, session windows)
-   - Stream joins (enrichment, temporal joins)
-   - Pattern detection (Complex Event Processing)
-   - Stateful transformations
-   - Reads Avro from raw topics via Schema Registry
-   - Writes Avro to derived topics via Schema Registry
+    - Windowed aggregations (tumbling, sliding, session windows)
+    - Stream joins (enrichment, temporal joins)
+    - Pattern detection (Complex Event Processing)
+    - Stateful transformations
+    - Reads Avro from raw topics via Schema Registry
+    - Writes Avro to derived topics via Schema Registry
 
 2. **Realtime Gateway (Spring Boot Service)**: Fan-out and routing ONLY
-   - Consumes derived topics from Kafka
-   - Routes messages by routing keys (sessionId, studentId, cohortId)
-   - Pushes to Next.js clients via SSE (Server-Sent Events)
-   - NO stream processing, NO computation, NO aggregation
-   - Session affinity for persistent SSE connections
+    - Consumes derived topics from Kafka
+    - Routes messages by routing keys (sessionId, studentId, cohortId)
+    - Pushes to Next.js clients via SSE (Server-Sent Events)
+    - NO stream processing, NO computation, NO aggregation
+    - Session affinity for persistent SSE connections
 
 3. **Why SSE over WebSockets?**
-   - **Simplicity**: Browser-native, no special client library required
-   - **One-way push**: Perfect for server-to-client real-time updates
-   - **HTTP/2 friendly**: Works through firewalls and proxies
-   - **Automatic reconnection**: Built-in browser retry logic
-   - **Lower overhead**: No handshake protocol, just chunked HTTP
+    - **Simplicity**: Browser-native, no special client library required
+    - **One-way push**: Perfect for server-to-client real-time updates
+    - **HTTP/2 friendly**: Works through firewalls and proxies
+    - **Automatic reconnection**: Built-in browser retry logic
+    - **Lower overhead**: No handshake protocol, just chunked HTTP
 
 ### Derived Topics
 
 Flink jobs produce derived topics consumed by services and the Realtime Gateway:
 
-| Topic Name | Produced By | Key | Purpose | Consumed By | UI Surface |
-|------------|-------------|-----|---------|-------------|------------|
-| `engagement.scores` | Flink Engagement Analytics Job | `studentId` | Real-time engagement metrics per student (score, alert thresholds, patterns) | Realtime Gateway, Bandit Engine | Student UI (engagement indicator) |
-| `decision.context` | Flink Engagement Analytics Job | `sessionId` | Enriched context for AI decision-making (student history, current state, performance) | Bandit Engine, Tip Service | N/A (internal) |
-| `adapt.actions` | Bandit Engine (consumes `decision.context`) | `studentId` | AI-driven adaptation actions (difficulty adjust, hint trigger, content change) | Realtime Gateway, Content Adapter | Student UI (hints, new questions) |
-| `instructor.tips` | Flink Instructor Metrics Job | `cohortId` or `studentId` | Coaching suggestions for instructors (struggling students, skill gaps) | Realtime Gateway | Instructor Dashboard (alerts) |
-| `cohort.heatmap` | Flink Instructor Metrics Job | `cohortId` | Aggregated cohort performance heatmap data (skill × difficulty matrix) | Realtime Gateway | Instructor Dashboard (heatmap viz) |
+| Topic Name          | Produced By                                 | Key                       | Purpose                                                                               | Consumed By                       | UI Surface                         |
+|---------------------|---------------------------------------------|---------------------------|---------------------------------------------------------------------------------------|-----------------------------------|------------------------------------|
+| `engagement.scores` | Flink Engagement Analytics Job              | `studentId`               | Real-time engagement metrics per student (score, alert thresholds, patterns)          | Realtime Gateway, Bandit Engine   | Student UI (engagement indicator)  |
+| `decision.context`  | Flink Engagement Analytics Job              | `sessionId`               | Enriched context for AI decision-making (student history, current state, performance) | Bandit Engine, Tip Service        | N/A (internal)                     |
+| `adapt.actions`     | Bandit Engine (consumes `decision.context`) | `studentId`               | AI-driven adaptation actions (difficulty adjust, hint trigger, content change)        | Realtime Gateway, Content Adapter | Student UI (hints, new questions)  |
+| `instructor.tips`   | Flink Instructor Metrics Job                | `cohortId` or `studentId` | Coaching suggestions for instructors (struggling students, skill gaps)                | Realtime Gateway                  | Instructor Dashboard (alerts)      |
+| `cohort.heatmap`    | Flink Instructor Metrics Job                | `cohortId`                | Aggregated cohort performance heatmap data (skill × difficulty matrix)                | Realtime Gateway                  | Instructor Dashboard (heatmap viz) |
 
 **Note**: Raw topics (`quiz.answers`, `session.events`) are produced by Event Ingest Service and consumed by Flink jobs.
 
 ### Realtime Gateway Service
 
 **What it does:**
+
 - Consumes derived Kafka topics (`engagement.scores`, `adapt.actions`, `instructor.tips`, `cohort.heatmap`)
 - Maintains persistent SSE connections to Next.js clients
 - Routes messages to appropriate SSE streams based on routing keys
 - Handles connection lifecycle (connect, disconnect, heartbeat)
 
 **What it does NOT do:**
+
 - ❌ Stream processing (windowing, aggregation, joins)
 - ❌ Business logic or computation
 - ❌ Event enrichment or transformation
@@ -164,25 +212,26 @@ Flink jobs produce derived topics consumed by services and the Realtime Gateway:
 
 **Routing Model:**
 
-| Stream Type | Routing Key | Subscribed By | Topics Consumed |
-|-------------|-------------|---------------|-----------------|
-| Student Stream | `studentId` | Student UI | `engagement.scores`, `adapt.actions` |
-| Instructor Stream | `cohortId` | Instructor Dashboard | `instructor.tips`, `cohort.heatmap` |
-| Session Stream | `sessionId` | Both (session-scoped) | All derived topics |
+| Stream Type       | Routing Key | Subscribed By         | Topics Consumed                      |
+|-------------------|-------------|-----------------------|--------------------------------------|
+| Student Stream    | `studentId` | Student UI            | `engagement.scores`, `adapt.actions` |
+| Instructor Stream | `cohortId`  | Instructor Dashboard  | `instructor.tips`, `cohort.heatmap`  |
+| Session Stream    | `sessionId` | Both (session-scoped) | All derived topics                   |
 
 **SSE Endpoint Example:**
+
 ```javascript
 // Frontend (Next.js)
 const eventSource = new EventSource(`${GATEWAY_URL}/sse/student/${studentId}`);
 
 eventSource.addEventListener('engagement', (e) => {
-  const score = JSON.parse(e.data);
-  updateEngagementIndicator(score);
+    const score = JSON.parse(e.data);
+    updateEngagementIndicator(score);
 });
 
 eventSource.addEventListener('adapt', (e) => {
-  const action = JSON.parse(e.data);
-  if (action.type === 'SHOW_HINT') showHint(action.hint);
+    const action = JSON.parse(e.data);
+    if (action.type === 'SHOW_HINT') showHint(action.hint);
 });
 ```
 
@@ -285,21 +334,22 @@ psql -h localhost -U edupulse -d edupulse -f scripts/seed-data.sql
 
 ---
 
-
-
 ## Cloud & Infrastructure
 
 ### Required GCP Resources
 
 #### Setup
+
 ```bash
 bash ./scripts/gcloud/setup.sh
 ```
 
 **Revoke existing auth**
+
 ```bash
 gcloud auth application-default revoke
 ```
+
 #### 1. Vertex AI
 
 **Purpose:** Multi-armed bandit inference
@@ -953,6 +1003,7 @@ echo $POSTGRES_URL
 ---
 
 **For additional help:**
+
 - Check service logs: `docker-compose logs -f <service-name>`
 - View Spring Boot actuator: `curl http://localhost:808X/actuator/health`
 - Monitor Kafka in Confluent Cloud UI

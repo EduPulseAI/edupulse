@@ -44,6 +44,9 @@ CLAUDE.md
 .env*
 !.env.example
 
+infra/secure/*
+
 ### Terraform ###
 .terraform*
-tfplan
+*tfplan
+*tfstate*
