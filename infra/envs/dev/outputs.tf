@@ -104,6 +104,12 @@ output "cloud_run_service_names" {
   value       = [for service_name in keys(module.cloud_run_services) : service_name]
 }
 
+
+output "quiz_service_url" {
+  description = "Quiz ingest service URL"
+  value       = try(module.cloud_run_services["quiz-service"].service_url, "")
+}
+
 # -----------------------------------------------------------------------------
 # Docker Build Commands
 # -----------------------------------------------------------------------------
@@ -179,7 +185,7 @@ output "next_steps" {
      # Gemini API key
      echo -n "YOUR_GEMINI_API_KEY" | gcloud secrets versions add gemini-api-key --data-file=-
 
-     # PostgreSQL credentials (for quizzer service)
+     # PostgreSQL credentials (for quiz service)
      echo -n "edupulse" | gcloud secrets versions add postgres-user --data-file=-
      echo -n "YOUR_POSTGRES_PASSWORD" | gcloud secrets versions add postgres-password --data-file=-
      echo -n "edupulse" | gcloud secrets versions add postgres-database --data-file=-
@@ -188,10 +194,10 @@ output "next_steps" {
      echo -n "$(openssl rand -base64 32)" | gcloud secrets versions add jwt-signing-key --data-file=-
 
   3. Build and push container images:
-     # Example for event-ingest-service
-     cd ../../../backend/event-ingest-service
-     docker build -t ${module.artifact_registry.repository_full_path}/event-ingest-service:latest .
-     docker push ${module.artifact_registry.repository_full_path}/event-ingest-service:latest
+     # Example for quiz-service
+     cd ../../../backend/quiz-service
+     docker build -t ${module.artifact_registry.repository_full_path}/quiz-service:latest .
+     docker push ${module.artifact_registry.repository_full_path}/quiz-service:latest
 
      # Or use the deploy script (once created):
      # ../../../scripts/deploy_with_terraform.sh
@@ -205,7 +211,7 @@ output "next_steps" {
   6. Access your services:
      ${join("\n     ", [for name, url in module.cloud_run_services : "${name}: ${url.service_url}"])}
 
-  7. Test Kafka connectivity from event-ingest-service:
+  7. Test Kafka connectivity from quiz-service:
      curl -X POST https://YOUR_SERVICE_URL/actuator/health
 
   ${var.enable_vertex_ai ? "8. Configure Vertex AI for bandit-engine (if using AI features):\n     # Deploy a model endpoint or use pre-trained model\n     gcloud ai endpoints list --project=${var.project_id} --region=${var.region}\n     \n     # Update bandit-engine environment variable with endpoint ID:\n     VERTEX_AI_ENDPOINT_ID=your-endpoint-id\n" : ""}

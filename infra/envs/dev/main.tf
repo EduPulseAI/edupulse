@@ -72,6 +72,16 @@ module "secret_manager" {
 }
 
 # -----------------------------------------------------------------------------
+# Secret Values Configuration
+# -----------------------------------------------------------------------------
+# Secret values must be set manually using the set-secrets.sh script:
+#   scripts/gcloud/set-secrets.sh <project-id>
+#
+# This is done separately from terraform apply to avoid provisioning timing issues.
+# Run the script after: terraform apply
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
 # IAM - Service Accounts and Role Bindings
 # -----------------------------------------------------------------------------
 
@@ -90,8 +100,8 @@ locals {
       ]
 
       # Enable Vertex AI for services that need it
-      enable_vertex_ai            = contains(["quizzer", "bandit-engine", "tip-service"], service_name) && var.enable_vertex_ai
-      enable_vertex_ai_prediction = contains(["quizzer", "bandit-engine", "tip-service"], service_name) && var.enable_vertex_ai
+      enable_vertex_ai            = contains(["quiz-service", "bandit-engine", "tip-service"], service_name) && var.enable_vertex_ai
+      enable_vertex_ai_prediction = contains(["quiz-service", "bandit-engine", "tip-service"], service_name) && var.enable_vertex_ai
 
       # Enable Artifact Registry pull (optional, Cloud Run handles this automatically)
       enable_artifact_registry_pull = false
@@ -150,13 +160,14 @@ module "vertex_ai" {
   # Only include service accounts that are actually deployed
   # Use service account emails directly from IAM module (computed)
   service_account_emails = [
-    for service_name in ["quizzer", "bandit-engine", "tip-service"] :
+    for service_name in ["quiz-service", "bandit-engine", "tip-service"] :
     "${service_name}-sa@${var.project_id}.iam.gserviceaccount.com"
     if contains(keys(var.services), service_name)
   ]
 
   # Enable default GCP-managed service agent for Vertex AI
-  enable_default_service_agent = true
+  # Disabled until we actually deploy Vertex AI models/endpoints
+  enable_default_service_agent = false
 
   # Optional: Enable logging and monitoring for Vertex AI operations
   enable_logging_permissions    = true

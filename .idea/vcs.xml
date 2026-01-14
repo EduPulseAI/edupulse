@@ -3,8 +3,12 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/backend/common" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/backend/engagement-service" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/backend/event-ingest-service" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/backend/quiz-service" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/backend/quizzer" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/frontend/horizontal-session-timeline" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/frontend/quiz-service-manager" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/frontend/quizzer-frontend" vcs="Git" />
   </component>
 </project>

@@ -25,8 +25,8 @@ artifact_registry_location      = "" # Defaults to var.region
 # -----------------------------------------------------------------------------
 
 services = {
-  event-ingest-service = {
-    image_name    = "event-ingest-service"
+  quiz-service = {
+    image_name    = "quiz-service"
     image_tag     = "latest"
     port          = 8080
     cpu           = "1000m"
@@ -37,12 +37,15 @@ services = {
     timeout       = 60
     ingress       = "INGRESS_TRAFFIC_ALL"
     env_vars = {
-      SPRING_PROFILES_ACTIVE = "dev"
+      SPRING_PROFILES_ACTIVE = "prod"
       SERVER_PORT            = "8080"
       LOGGING_LEVEL_ROOT     = "INFO"
+      GCP_REGION             = "us-central1"
+      GCP_PROJECT_ID         = "edupulse-483220"
+      GEMINI_MODEL           = "gemini-2.5-flash"
     }
     secret_env_vars = {
-      KAFKA_BOOTSTRAP_SERVERS = {
+      BOOTSTRAP_SERVERS = {
         secret_name = "kafka-bootstrap-servers"
         version     = "latest"
       }
@@ -66,31 +69,6 @@ services = {
         secret_name = "schema-registry-api-secret"
         version     = "latest"
       }
-    }
-  }
-
-  quizzer = {
-    image_name    = "quizzer"
-    image_tag     = "latest"
-    port          = 8080
-    cpu           = "1000m"
-    memory        = "512Mi"
-    min_instances = 0
-    max_instances = 10
-    concurrency   = 80
-    timeout       = 60
-    ingress       = "INGRESS_TRAFFIC_ALL"
-    env_vars = {
-      SPRING_PROFILES_ACTIVE        = "prod"
-      SERVER_PORT                   = "8080"
-      LOGGING_LEVEL_ROOT            = "INFO"
-      # Vertex AI Gemini Configuration
-      GCP_PROJECT_ID                = "edupulse-483220"
-      GCP_REGION                    = "us-central1"
-      GEMINI_MODEL                  = "gemini-1.5-flash"
-      # VERTEX_AI_CREDENTIALS_URI is not set - uses ADC (Application Default Credentials)
-    }
-    secret_env_vars = {
       DATABASE_USER = {
         secret_name = "postgres-user"
         version     = "latest"
@@ -109,6 +87,8 @@ services = {
       }
     }
   }
+
+
 
   # bandit-engine = {
   #   image_name    = "bandit-engine"
@@ -203,49 +183,6 @@ services = {
   #   }
   # }
   #
-  # content-adapter = {
-  #   image_name    = "content-adapter"
-  #   image_tag     = "latest"
-  #   port          = 8080
-  #   cpu           = "500m"
-  #   memory        = "256Mi"
-  #   min_instances = 0
-  #   max_instances = 10
-  #   concurrency   = 80
-  #   timeout       = 60
-  #   ingress       = "INGRESS_TRAFFIC_INTERNAL_ONLY"
-  #   env_vars = {
-  #     SPRING_PROFILES_ACTIVE = "dev"
-  #     SERVER_PORT            = "8080"
-  #   }
-  #   secret_env_vars = {
-  #     KAFKA_BOOTSTRAP_SERVERS = {
-  #       secret_name = "kafka-bootstrap-servers"
-  #       version     = "latest"
-  #     }
-  #     KAFKA_API_KEY = {
-  #       secret_name = "kafka-api-key"
-  #       version     = "latest"
-  #     }
-  #     KAFKA_API_SECRET = {
-  #       secret_name = "kafka-api-secret"
-  #       version     = "latest"
-  #     }
-  #     SCHEMA_REGISTRY_URL = {
-  #       secret_name = "schema-registry-url"
-  #       version     = "latest"
-  #     }
-  #     SCHEMA_REGISTRY_API_KEY = {
-  #       secret_name = "schema-registry-api-key"
-  #       version     = "latest"
-  #     }
-  #     SCHEMA_REGISTRY_API_SECRET = {
-  #       secret_name = "schema-registry-api-secret"
-  #       version     = "latest"
-  #     }
-  #   }
-  # }
-  #
   # realtime-gateway = {
   #   image_name    = "realtime-gateway"
   #   image_tag     = "latest"
@@ -332,19 +269,19 @@ secrets = [
   },
   {
     name        = "postgres-user"
-    description = "PostgreSQL database username for quizzer service"
+    description = "PostgreSQL database username for quiz service"
   },
   {
     name        = "postgres-password"
-    description = "PostgreSQL database password for quizzer service"
+    description = "PostgreSQL database password for quiz service"
   },
   {
     name        = "postgres-database"
-    description = "PostgreSQL database name for quizzer service"
+    description = "PostgreSQL database name for quiz service"
   },
   {
     name        = "postgres-host"
-    description = "PostgreSQL database host for quizzer service"
+    description = "PostgreSQL database host for quiz service"
   }
 ]
 

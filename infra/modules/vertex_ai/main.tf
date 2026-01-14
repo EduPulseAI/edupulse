@@ -74,6 +74,18 @@ data "google_project" "project" {
   project_id = var.project_id
 }
 
+# Wait for Google-managed service account to be created after API enablement
+# The service account is created asynchronously and may take 30-60 seconds
+resource "time_sleep" "wait_for_service_account" {
+  count = var.enable_default_service_agent ? 1 : 0
+
+  create_duration = "60s"
+
+  depends_on = [
+    google_project_service.vertex_ai_apis
+  ]
+}
+
 # Grant the default AI Platform Service Agent permissions (system-managed)
 # This is the GCP-managed service account for Vertex AI operations
 resource "google_project_iam_member" "default_ai_service_agent" {
@@ -84,7 +96,8 @@ resource "google_project_iam_member" "default_ai_service_agent" {
   member  = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-aiplatform.iam.gserviceaccount.com"
 
   depends_on = [
-    google_project_service.vertex_ai_apis
+    google_project_service.vertex_ai_apis,
+    time_sleep.wait_for_service_account
   ]
 }
 
