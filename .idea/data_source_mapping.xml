@@ -2,6 +2,7 @@
 <project version="4">
   <component name="DataSourcePerFileMappings">
     <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/4838b2ab-c9ba-4325-aa2b-3dd3e6c9761e/console.sql" value="4838b2ab-c9ba-4325-aa2b-3dd3e6c9761e" />
+    <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/6ee98b21-0415-4f22-801f-15dd93a0df90/console.sql" value="6ee98b21-0415-4f22-801f-15dd93a0df90" />
     <file url="file://$PROJECT_DIR$/infra/docker/postgres/init.sql" value="6ee98b21-0415-4f22-801f-15dd93a0df90" />
   </component>
 </project>
