@@ -9,7 +9,7 @@ PROJECT := edupulse-483220
 REPOSITORY := edupulse
 
 # Services
-SERVICES := event-ingest-service quizzer
+SERVICES := quiz-service
 
 help:
 	@echo "EduPulse Backend Build Commands"
@@ -66,30 +66,17 @@ docker-push:
 	@../scripts/docker/build-images.sh --push
 
 # Individual service targets
-build-event-ingest-service:
-	cd event-ingest-service && ./mvnw clean install
+build-quiz-service:
+	cd quiz-service && ./mvnw clean install
 
-build-quizzer:
-	cd quizzer && ./mvnw clean install
+test-quiz-service:
+	cd quiz-service && ./mvnw test
 
-test-event-ingest-service:
-	cd event-ingest-service && ./mvnw test
+docker-build-quiz-service:
+	../scripts/docker/build-images.sh quiz-service
 
-test-quizzer:
-	cd quizzer && ./mvnw test
-
-docker-build-event-ingest-service:
-	../scripts/docker/build-images.sh event-ingest-service
-
-docker-build-quizzer:
-	../scripts/docker/build-images.sh quizzer
-
-docker-push-event-ingest-service:
-	../scripts/docker/build-images.sh --push event-ingest-service
-
-docker-push-quizzer:
-	../scripts/docker/build-images.sh --push quizzer
+docker-push-quiz-service:
+	../scripts/docker/build-images.sh --push quiz-service
 
 # Quick shortcuts
-ei: build-event-ingest-service
-q: build-quizzer
+q: build-quiz-service

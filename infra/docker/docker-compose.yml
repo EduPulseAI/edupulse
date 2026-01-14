@@ -1,16 +1,59 @@
 name: edupulse
 services:
-  quizzer:
-    image: macchiato23/quizzer:0.0.2-SNAPSHOT
+  ingest:
+    image: us-central1-docker.pkg.dev/edupulse-483220/edupulse/event-ingest-service:0.0.1-SNAPSHOT
+    env_file:
+      - ../../.env
     environment:
-      DATABASE_HOST: postgres
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_PROFILES_ACTIVE: docker
+      BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      SCHEMA_REGISTRY_URL: ${SCHEMA_REGISTRY_URL}
+      SCHEMA_REGISTRY_API_KEY: ${SCHEMA_REGISTRY_API_KEY}
+      SCHEMA_REGISTRY_API_SECRET: ${SCHEMA_REGISTRY_API_SECRET}
+      KAFKA_API_KEY: ${KAFKA_API_KEY}
+      KAFKA_API_SECRET: ${KAFKA_API_SECRET}
+      SPRING_KAFKA_PROPERTIES_SECURITY_PROTOCOL: SASL_SSL
+      SPRING_KAFKA_PROPERTIES_SASL_MECHANISM: PLAIN
+      SPRING_KAFKA_PROPERTIES_SASL_JAAS_CONFIG: org.apache.kafka.common.security.plain.PlainLoginModule required username='${KAFKA_API_KEY}' password='${KAFKA_API_SECRET}';
+      APP_CLIENTS_QUIZZER_URL: http://quizzer:8080
     networks:
       - postgres
+      - microservice
+      - kafka-net
     ports:
-      - "8180:8080"
+      - "8081:8080"
     depends_on:
       - postgres
+
+  quizzer:
+    image: us-central1-docker.pkg.dev/edupulse-483220/edupulse/quizzer:0.0.2-SNAPSHOT
+    env_file:
+      - ../../.env
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      GCP_REGION: ${REGION}
+      GCP_PROJECT_ID: ${PROJECT_ID}
+    volumes:
+      - ${GCP_CREDENTIALS_PATH:-../secure/vertex-ai-credentials.json}:/app/config/gcp-credentials.json:ro
+    networks:
+      - postgres
+      - microservice
+      - kafka-net
+    ports:
+      - "8082:8080"
+    depends_on:
+      - postgres
+
+  redis:
+    image: redis
+    hostname: redis
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - redis
+    restart: unless-stopped
+
   kafka-1:
     image: confluentinc/cp-kafka:latest
     container_name: kafka-1
@@ -35,7 +78,7 @@ services:
     restart: unless-stopped
 
   postgres:
-    image: postgres
+    image: postgres:17-alpine3.19
     environment:
       POSTGRES_USER: ${DATABASE_USER:-default}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-password}
@@ -51,6 +94,8 @@ services:
     restart: unless-stopped
 
 networks:
+  microservice:
+    driver: bridge
   kafka-net:
     driver: bridge
     external: true
@@ -59,6 +104,10 @@ networks:
     driver: bridge
     external: true
     name: postgres
+  redis:
+    driver: bridge
+    external: true
+    name: redis
 
 volumes:
   kafka-1-data:

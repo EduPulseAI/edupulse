@@ -41,7 +41,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$(cd "${SCRIPT_DIR}/../../backend" && pwd)"
 
 # Available services
-ALL_SERVICES=("event-ingest-service" "quizzer")
+ALL_SERVICES=("quiz-service")
 SERVICES_TO_BUILD=()
 
 # Function to print colored output
@@ -132,8 +132,13 @@ get_version_from_pom() {
         return 1
     fi
 
-    # Extract version using grep and sed
-    grep -m 1 "<version>" "$pom_file" | sed 's/.*<version>\(.*\)<\/version>.*/\1/' | xargs
+    # Use Maven to get the project version (not parent version)
+    if [ -x "${service_dir}/mvnw" ]; then
+        cd "$service_dir" && ./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout 2>/dev/null
+    else
+        print_error "mvnw not found or not executable in ${service_dir}"
+        return 1
+    fi
 }
 
 # Function to build image for a service
@@ -167,7 +172,7 @@ build_service_image() {
     print_info "Building image: ${versioned_image}"
 
     # Build the image with Maven
-    if ./mvnw -Dimage.name="${versioned_image}" spring-boot:build-image; then
+    if ./mvnw -Dimage.name="${versioned_image}" -DskipTests spring-boot:build-image; then
         print_success "Built ${versioned_image}"
     else
         print_error "Failed to build ${service}"
