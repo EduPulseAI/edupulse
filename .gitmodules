@@ -1,0 +1,6 @@
+[submodule "backend/common"]
+	path = backend/common
+	url = git@github.com:EduPulseAI/common.git
+[submodule "backend/quiz-service"]
+	path = backend/quiz-service
+	url = git@github.com:EduPulseAI/quiz-service.git

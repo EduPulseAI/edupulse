@@ -30,7 +30,7 @@ services = {
     image_tag     = "latest"
     port          = 8080
     cpu           = "1000m"
-    memory        = "512Mi"
+    memory        = "1Gi"
     min_instances = 0
     max_instances = 10
     concurrency   = 80
@@ -83,6 +83,10 @@ services = {
       }
       DATABASE_HOST = {
         secret_name = "postgres-host"
+        version     = "latest"
+      }
+      JWT_SECRET = {
+        secret_name = "jwt-signing-key"
         version     = "latest"
       }
     }
