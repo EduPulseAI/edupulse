@@ -9,7 +9,7 @@ PROJECT := edupulse-483220
 REPOSITORY := edupulse
 
 # Services
-SERVICES := quiz-service
+SERVICES := quiz-service engagement-service
 
 help:
 	@echo "EduPulse Backend Build Commands"
@@ -78,5 +78,24 @@ docker-build-quiz-service:
 docker-push-quiz-service:
 	../scripts/docker/build-images.sh --push quiz-service
 
+
+build-engagement-service:
+	cd engagement-service && ./mvnw clean install
+
+test-engagement-service:
+	cd engagement-service && ./mvnw test
+
+docker-build-engagement-service:
+	../scripts/docker/build-images.sh engagement-service
+
+docker-push-engagement-service:
+	../scripts/docker/build-images.sh --push engagement-service
+
 # Quick shortcuts
-q: build-quiz-service
+bq: build-quiz-service
+dbq: docker-build-quiz-service
+dpq: docker-push-quiz-service
+
+be: build-engagement-service
+dbe: docker-build-engagement-service
+dpe: docker-push-engagement-service

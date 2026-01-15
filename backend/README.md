@@ -36,9 +36,8 @@ The backend explicitly does **NOT**:
 
 | Service Name                                                              | Status      | Primary Responsibility                                                             | Kafka Interaction                                              |
 |---------------------------------------------------------------------------|-------------|------------------------------------------------------------------------------------|----------------------------------------------------------------|
-| [**event-ingest-service**       ](./event-ingest-service/README.md)       | Implemented | HTTP API gateway for client events; validates and publishes to Kafka               | Produces: `quiz.answers`, `session.events`                     |
-| [**quizzer**                    ](./quizzer/README.md)                    | Implemented | Quiz content management; stores questions, topics, and metadata                    | Consumes: `quiz.answers` (optional)                            |
-| [**engagement-feature-service** ](./engagement-feature-service/README.md) | Planned     | Enriches raw events with engagement features using Flink-computed metrics          | Consumes: `engagement.scores`<br>Produces: enriched events     |
+| [**quiz-service**               ](./quiz-service/README.md)               | Implemented | Unified service: HTTP API gateway, quiz content management, session handling, AI question generation | Produces: `quiz.answers`, `session.events`                     |
+| [**engagement-service**         ](./engagement-service/README.md)         | In Progress | Enriches raw events with engagement features using Flink-computed metrics          | Consumes: `engagement.scores`<br>Produces: enriched events     |
 | [**policy-bandit-service**      ](./policy-bandit-service/README.md)      | Planned     | Executes multi-armed bandit policy via Vertex AI; selects next question difficulty | Consumes: engagement events<br>Produces: `adapt.actions`       |
 | [**content-adapter-service**    ](./content-adapter-service/README.md)    | Planned     | Applies adaptation actions; selects content based on bandit decisions              | Consumes: `adapt.actions`<br>Produces: adapted content events  |
 | [**tip-orchestration-service**  ](./tip-orchestration-service/README.md)  | Planned     | Generates instructor coaching tips using Gemini AI based on class-wide patterns    | Consumes: aggregated engagement<br>Produces: `instructor.tips` |
@@ -48,13 +47,13 @@ The backend explicitly does **NOT**:
 
 The backend follows a clear event flow from user interaction to adaptive response:
 
-1. **Raw Event Ingestion**: The frontend sends user interactions (quiz answers, navigation, focus/blur events) to `event-ingest-service` via REST API. The service validates the payload and publishes Avro-serialized events to Kafka topics (`quiz.answers`, `session.events`).
+1. **Raw Event Ingestion**: The frontend sends user interactions (quiz answers, navigation, focus/blur events) to `quiz-service` via REST API. The service validates the payload and publishes Avro-serialized events to Kafka topics (`quiz.answers`, `session.events`).
 
 2. **Stream Processing with Flink**: Apache Flink jobs consume raw events and perform real-time computations including time-based windowing (5-minute tumbling windows), stream joins (joining quiz answers with session context), feature enrichment (calculating engagement scores, time-on-task), and pattern detection (identifying struggling learners or disengagement). Flink produces derived topics such as `engagement.scores`, `session.aggregates`, and `pattern.alerts`.
 
 3. **AI-Driven Adaptation**: Services like `policy-bandit-service` consume enriched events and invoke Vertex AI to select optimal difficulty levels using multi-armed bandit algorithms. Adaptation decisions are published to `adapt.actions` topic.
 
-4. **Content Selection**: `content-adapter-service` consumes adaptation actions and queries the `quizzer` service to select appropriate questions, publishing adapted content events back to Kafka.
+4. **Content Selection**: `content-adapter-service` consumes adaptation actions and queries the `quiz-service` to select appropriate questions, publishing adapted content events back to Kafka.
 
 5. **Real-Time Gateway**: `realtime-gateway-service` subscribes to all derived topics and maintains open SSE connections with frontend clients. It fans out events based on client subscriptions (session ID, student ID, or instructor dashboard).
 
@@ -87,7 +86,7 @@ Specific Avro schema definitions are maintained in each service's repository. Re
 
 **Working on a Specific Service?**
 - Navigate to the service directory and open its `README.md` for detailed documentation
-- Example: [event-ingest-service README](./event-ingest-service/README.md)
+- Example: [quiz-service README](./quiz-service/README.md)
 
 **Understanding Stream Processing Logic?**
 - Flink SQL and streaming jobs are located in `infra/confluent/flink/`

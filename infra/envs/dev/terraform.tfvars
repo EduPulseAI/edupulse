@@ -92,6 +92,49 @@ services = {
     }
   }
 
+  engagement-service = {
+    image_name    = "engagement-service"
+    image_tag     = "latest"
+    port          = 8080
+    cpu           = "1000m"
+    memory        = "1Gi"
+    min_instances = 0
+    max_instances = 10
+    concurrency   = 80
+    timeout       = 60
+    ingress       = "INGRESS_TRAFFIC_ALL"
+    env_vars = {
+      SPRING_PROFILES_ACTIVE = "prod"
+      SERVER_PORT            = "8080"
+      LOGGING_LEVEL_ROOT     = "INFO"
+    }
+    secret_env_vars = {
+      KAFKA_BOOTSTRAP_SERVERS = {
+        secret_name = "kafka-bootstrap-servers"
+        version     = "latest"
+      }
+      KAFKA_API_KEY = {
+        secret_name = "kafka-api-key"
+        version     = "latest"
+      }
+      KAFKA_API_SECRET = {
+        secret_name = "kafka-api-secret"
+        version     = "latest"
+      }
+      SCHEMA_REGISTRY_URL = {
+        secret_name = "schema-registry-url"
+        version     = "latest"
+      }
+      SCHEMA_REGISTRY_API_KEY = {
+        secret_name = "schema-registry-api-key"
+        version     = "latest"
+      }
+      SCHEMA_REGISTRY_API_SECRET = {
+        secret_name = "schema-registry-api-secret"
+        version     = "latest"
+      }
+    }
+  }
 
 
   # bandit-engine = {
