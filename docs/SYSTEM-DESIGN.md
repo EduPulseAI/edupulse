@@ -41,7 +41,7 @@ EduPulse is built on a **fully event-driven architecture** using Confluent Kafka
 | Layer                 | Technology                             | Purpose                                |
 |-----------------------|----------------------------------------|----------------------------------------|
 | **Frontend**          | Next.js 15, React 19, TypeScript       | Student UI, Instructor Dashboard       |
-| **API Gateway**       | Spring Boot 3.5 (Event Ingest Service) | HTTP → Kafka producer                  |
+| **API Gateway**       | Spring Boot 3.5 (Quiz Service)         | HTTP → Kafka producer, content management |
 | **Messaging**         | Confluent Kafka (KRaft mode)           | Event streaming backbone               |
 | **Stream Processing** | Confluent Flink 1.18+                  | Real-time analytics, aggregations, CEP |
 | **Schema Registry**   | Confluent Schema Registry              | Avro schema management                 |
@@ -80,16 +80,17 @@ EduPulse is built on a **fully event-driven architecture** using Confluent Kafka
 │                        Frontend (Next.js)                        │
 │                                                                  │
 │  Student submits quiz answer                                    │
-│  Frontend sends HTTP POST to Event Ingest Service               │
+│  Frontend sends HTTP POST to Quiz Service                       │
 └────────────────────────────┬─────────────────────────────────────┘
                              │
                              ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│                    Event Ingest Service                          │
+│                         Quiz Service                             │
 │                                                                  │
 │  • Validates request                                            │
 │  • Enriches with metadata (timestamp, sessionId)                │
 │  • Produces Avro message to quiz.answers topic                  │
+│  • Manages quiz content (topics, questions, sessions)           │
 └────────────────────────────┬─────────────────────────────────────┘
                              │
                              ▼
@@ -186,7 +187,7 @@ EduPulse is built on a **fully event-driven architecture** using Confluent Kafka
 ### 1. Student Answers Question
 
 ```
-Student UI → POST /api/quiz/answer
+Student UI → POST /api/quiz/answer/submit
   {
     "studentId": "alice",
     "questionId": "q1",
@@ -195,7 +196,7 @@ Student UI → POST /api/quiz/answer
     "timeSpent": 15000
   }
 
-Event Ingest Service → Kafka (quiz.answers topic)
+Quiz Service → Kafka (quiz.answers topic)
   Key: "alice"
   Value (Avro):
   {
@@ -446,8 +447,8 @@ Flink jobs and microservices produce **derived topics** consumed by the Realtime
 
 | Topic Name | Produced By | Key | Schema | Purpose |
 |------------|-------------|-----|--------|---------|
-| `quiz.answers` | Event Ingest Service | `studentId` | `QuizAnswer.avsc` | Student quiz submissions (answer, correctness, time spent) |
-| `session.events` | Event Ingest Service | `sessionId` | `SessionEvent.avsc` | Student behavioral events (navigation, focus, idle time) |
+| `quiz.answers` | Quiz Service | `studentId` | `QuizAnswer.avsc` | Student quiz submissions (answer, correctness, time spent) |
+| `session.events` | Quiz Service | `sessionId` | `SessionEvent.avsc` | Student behavioral events (navigation, focus, idle time) |
 
 ---
 
@@ -632,26 +633,33 @@ memory: 512Mi
 
 | Service | Responsibility | Kafka Role | AI Integration |
 |---------|----------------|------------|----------------|
-| **Event Ingest Service** | HTTP API gateway, event validation, Kafka producer | Producer (raw topics) | None |
-| **Quizzer Service** | Quiz content management, question CRUD | None (uses PostgreSQL) | None |
+| **Quiz Service** | HTTP API gateway, event validation, Kafka producer, quiz content management, question CRUD, session management | Producer (raw topics) | Google Gemini (question generation) |
 | **Bandit Engine** | Multi-armed bandit difficulty adaptation | Consumer + Producer | Vertex AI (bandit model) |
 | **Tip Service** | AI-powered hint generation | Consumer + Producer | Google Gemini (prompt-based) |
 | **Content Adapter** | Dynamic content adjustment based on adapt actions | Consumer only | None |
 | **Realtime Gateway** | Kafka → SSE fan-out | Consumer only (derived topics) | None |
 
-### Event Ingest Service
+### Quiz Service
 
-**Purpose**: Entry point for all frontend events
+**Purpose**: Unified service combining event ingestion, quiz content management, session handling, and question generation
 
 **Endpoints**:
-- `POST /api/quiz/answer` - submit quiz answer
-- `POST /api/events/session` - log session event (navigation, focus, idle)
+- `POST /api/quiz/answer/submit` - submit quiz answer and produce to Kafka
+- `POST /api/quiz/sessions/start` - start a new quiz session
+- `GET /api/quiz/sessions` - list sessions with search criteria
+- `GET /api/quiz/sessions/{id}` - get session details
+- `POST /api/quiz/questions/generate` - generate questions using Gemini AI
+- `GET /api/quiz/questions` - list questions with filtering
+- `POST /api/topics` - create topic
+- `GET /api/topics` - list topics
+- `POST /api/students` - create student
+- `GET /api/students/{name}` - get student by name
 
-**Flow**:
-1. Validate request (schema validation)
-2. Enrich with metadata (timestamp, sessionId, IP)
-3. Produce Avro message to Kafka
-4. Return acknowledgment to client
+**Core Capabilities**:
+1. **Event Ingestion**: Validates quiz submissions and produces Avro messages to Kafka
+2. **Content Management**: CRUD operations for topics, questions, and students (PostgreSQL)
+3. **Session Management**: Creates and tracks quiz sessions
+4. **Question Generation**: AI-powered question generation using Vertex AI Gemini
 
 **Kafka Producer Config**:
 ```yaml
@@ -854,7 +862,7 @@ Provide a brief hint (1-2 sentences) to guide the student without giving away th
 
 | Service | Min | Max | Target CPU | Target Concurrency |
 |---------|-----|-----|------------|-------------------|
-| event-ingest-service | 0 | 10 | 70% | 100 |
+| quiz-service | 0 | 10 | 70% | 100 |
 | bandit-engine | 0 | 5 | 70% | 50 |
 | tip-service | 0 | 5 | 70% | 50 |
 | realtime-gateway | 1 | 10 | 70% | 100 (SSE connections) |
@@ -899,7 +907,7 @@ Provide a brief hint (1-2 sentences) to guide the student without giving away th
 - **Secret Manager**: Kafka credentials, API keys
 - **Vertex AI**: Bandit model endpoint
 - **Memorystore (Redis)**: SSE routing maps
-- **Cloud SQL**: PostgreSQL for quizzer service (optional)
+- **Cloud SQL**: PostgreSQL for quiz service (optional)
 
 ### Networking
 
@@ -910,5 +918,5 @@ Provide a brief hint (1-2 sentences) to guide the student without giving away th
 
 ---
 
-**Last Updated**: 2026-01-03
-**Architecture Version**: 2.0 (Flink + SSE + Redis)
+**Last Updated**: 2026-01-14
+**Architecture Version**: 2.1 (Quiz Service consolidation)
