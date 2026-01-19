@@ -258,7 +258,7 @@ edupulse/
 │   │   ├── src/
 │   │   ├── pom.xml
 │   │   └── README.md
-│   ├── realtime-gateway/
+│   ├── sse-service/
 │   │   ├── src/
 │   │   ├── pom.xml
 │   │   └── README.md
@@ -323,7 +323,7 @@ psql -h localhost -U edupulse -d edupulse -f scripts/seed-data.sql
 #cd backend/event-ingest-service && ./gradlew bootRun
 #cd backend/engagement-service && ./gradlew bootRun
 #cd backend/bandit-engine && ./gradlew bootRun
-#cd backend/realtime-gateway && ./gradlew bootRun
+#cd backend/sse-service && ./mvnw spring-boot:run
 
 # Start frontend
 #cd frontend && npm install && npm run dev
@@ -622,7 +622,7 @@ echo "Start backend services (in separate terminals):"
 echo "  cd backend/event-ingest-service && ./gradlew bootRun"
 echo "  cd backend/engagement-service && ./gradlew bootRun"
 echo "  cd backend/bandit-engine && ./gradlew bootRun"
-echo "  cd backend/realtime-gateway && ./gradlew bootRun"
+echo "  cd backend/sse-service && ./mvnw spring-boot:run"
 echo ""
 echo "Start frontend:"
 echo "  cd frontend && npm run dev"
@@ -775,8 +775,8 @@ cd backend/engagement-service && ./gradlew bootRun
 # Terminal 4: Bandit Engine
 cd backend/bandit-engine && ./gradlew bootRun
 
-# Terminal 5: Realtime Gateway
-cd backend/realtime-gateway && ./gradlew bootRun
+# Terminal 5: SSE Service
+cd backend/sse-service && ./mvnw spring-boot:run
 
 # Terminal 6: Frontend
 cd frontend && npm run dev
@@ -948,15 +948,15 @@ kafka-console-consumer --bootstrap-server localhost:9092 \
 ```bash
 # Check SSE endpoint is accessible
 curl -N -H "Accept: text/event-stream" \
-  https://realtime-gateway-xyz.run.app/sse/student/test-student-123
+  https://sse-service-xyz.run.app/sse/student/test-student-123/session/test-session
 
 # Verify CORS configuration allows SSE
-# In RealtimeGatewayController.java, ensure:
+# In SseController.java, ensure:
 # @CrossOrigin(origins = "*", allowedHeaders = "*")
 
 # Check Kafka consumer is running and consuming derived topics
 # View logs:
-gcloud run services logs read realtime-gateway --region us-central1 --limit 100
+gcloud run services logs read sse-service --region us-central1 --limit 100
 
 # Test with JavaScript EventSource
 node -e "const EventSource = require('eventsource'); const es = new EventSource('http://localhost:8086/sse/student/alice'); es.onmessage = console.log;"

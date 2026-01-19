@@ -34,14 +34,14 @@ The backend explicitly does **NOT**:
 
 ## Backend Services
 
-| Service Name                                                              | Status      | Primary Responsibility                                                             | Kafka Interaction                                              |
-|---------------------------------------------------------------------------|-------------|------------------------------------------------------------------------------------|----------------------------------------------------------------|
-| [**quiz-service**               ](./quiz-service/README.md)               | Implemented | Unified service: HTTP API gateway, quiz content management, session handling, AI question generation | Produces: `quiz.answers`, `session.events`                     |
-| [**engagement-service**         ](./engagement-service/README.md)         | In Progress | Enriches raw events with engagement features using Flink-computed metrics          | Consumes: `engagement.scores`<br>Produces: enriched events     |
-| [**policy-bandit-service**      ](./policy-bandit-service/README.md)      | Planned     | Executes multi-armed bandit policy via Vertex AI; selects next question difficulty | Consumes: engagement events<br>Produces: `adapt.actions`       |
-| [**content-adapter-service**    ](./content-adapter-service/README.md)    | Planned     | Applies adaptation actions; selects content based on bandit decisions              | Consumes: `adapt.actions`<br>Produces: adapted content events  |
-| [**tip-orchestration-service**  ](./tip-orchestration-service/README.md)  | Planned     | Generates instructor coaching tips using Gemini AI based on class-wide patterns    | Consumes: aggregated engagement<br>Produces: `instructor.tips` |
-| [**realtime-gateway-service**   ](./realtime-gateway-service/README.md)   | Planned     | SSE gateway; fans out derived Kafka events to frontend clients in real-time        | Consumes: all derived topics<br>Produces: SSE streams          |
+| Service Name                                                             | Status      | Primary Responsibility                                                                               | Kafka Interaction                                              |
+|--------------------------------------------------------------------------|-------------|------------------------------------------------------------------------------------------------------|----------------------------------------------------------------|
+| [**quiz-service**               ](./quiz-service/README.md)              | Implemented | Unified service: HTTP API gateway, quiz content management, session handling, AI question generation | Produces: `quiz.answers`, `session.events`                     |
+| [**engagement-service**         ](./engagement-service/README.md)        | In Progress | Enriches raw events with engagement features using Flink-computed metrics                            | Consumes: `engagement.scores`<br>Produces: enriched events     |
+| [**policy-bandit-service**      ](./policy-bandit-service/README.md)     | Planned     | Executes multi-armed bandit policy via Vertex AI; selects next question difficulty                   | Consumes: engagement events<br>Produces: `adapt.actions`       |
+| [**content-adapter-service**    ](./content-adapter-service/README.md)   | Planned     | Applies adaptation actions; selects content based on bandit decisions                                | Consumes: `adapt.actions`<br>Produces: adapted content events  |
+| [**tip-orchestration-service**  ](./tip-orchestration-service/README.md) | Planned     | Generates instructor coaching tips using Gemini AI based on class-wide patterns                      | Consumes: aggregated engagement<br>Produces: `instructor.tips` |
+| [**sse-service**                ](./sse-service/README.md)               | Implemented | SSE gateway; fans out derived Kafka events to frontend clients in real-time                          | Consumes: all derived topics<br>Produces: SSE streams          |
 
 ## Real-Time Data Flow
 
@@ -55,9 +55,9 @@ The backend follows a clear event flow from user interaction to adaptive respons
 
 4. **Content Selection**: `content-adapter-service` consumes adaptation actions and queries the `quiz-service` to select appropriate questions, publishing adapted content events back to Kafka.
 
-5. **Real-Time Gateway**: `realtime-gateway-service` subscribes to all derived topics and maintains open SSE connections with frontend clients. It fans out events based on client subscriptions (session ID, student ID, or instructor dashboard).
+5. **SSE Service**: `sse-service` subscribes to all derived topics and maintains open SSE connections with frontend clients. It fans out events based on client subscriptions (session ID, student ID, or instructor dashboard).
 
-**Key Principle**: Flink owns all complex stream processing logic. The realtime gateway is a simple fan-out layer with no business logic beyond routing.
+**Key Principle**: Flink owns all complex stream processing logic. The SSE service is a simple fan-out layer with no business logic beyond routing.
 
 ## Schema & Messaging Standards
 

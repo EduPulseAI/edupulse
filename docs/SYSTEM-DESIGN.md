@@ -11,7 +11,7 @@
 3. [Event Flow & Data Flow](#event-flow--data-flow)
 4. [Flink Stream Processing](#flink-stream-processing)
 5. [Derived Topics](#derived-topics)
-6. [Realtime Gateway Service](#realtime-gateway-service)
+6. [SSE Service](#sse-service)
 7. [Backend Services](#backend-services)
 8. [Schema Governance with Avro](#schema-governance-with-avro)
 9. [AI/ML Integration](#aiml-integration)
@@ -25,7 +25,7 @@ EduPulse is built on a **fully event-driven architecture** using Confluent Kafka
 
 - **Confluent Flink**: ALL real-time stream processing and computation
 - **Spring Boot Microservices**: Business logic, AI integration, content management
-- **Realtime Gateway**: Fan-out and SSE delivery ONLY (no computation)
+- **SSE Service**: Fan-out and SSE delivery ONLY (no computation)
 - **Next.js Frontend**: Student UI and Instructor Dashboard with SSE
 
 ### Core Principles
@@ -452,7 +452,7 @@ Flink jobs and microservices produce **derived topics** consumed by the Realtime
 
 ---
 
-## Realtime Gateway Service
+## SSE Service
 
 ### Architecture
 
@@ -563,7 +563,7 @@ public class RealtimeGatewayController {
     return emitter;
   }
 
-  @KafkaListener(topics = "engagement.scores", groupId = "realtime-gateway")
+  @KafkaListener(topics = "engagement.scores", groupId = "sse-service")
   public void consumeEngagementScores(ConsumerRecord<String, EngagementScore> record) {
     String studentId = record.key();
     EngagementScore score = record.value();
@@ -865,7 +865,7 @@ Provide a brief hint (1-2 sentences) to guide the student without giving away th
 | quiz-service | 0 | 10 | 70% | 100 |
 | bandit-engine | 0 | 5 | 70% | 50 |
 | tip-service | 0 | 5 | 70% | 50 |
-| realtime-gateway | 1 | 10 | 70% | 100 (SSE connections) |
+| sse-service | 1 | 10 | 70% | 100 (SSE connections) |
 
 ### Performance Targets
 

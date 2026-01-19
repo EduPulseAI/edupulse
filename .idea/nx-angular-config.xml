@@ -3,8 +3,8 @@
   <component name="NxAngularConfigService" workspaceLocation="file://$PROJECT_DIR$/frontend/quizzer-frontend/nx.json">
     <projects>
       <project name="@coding-quizzer/source" file="file://$PROJECT_DIR$/frontend/quizzer-frontend/project.json" />
+      <project name="api-client" file="file://$PROJECT_DIR$/frontend/quizzer-frontend/clients/api-client/project.json" />
       <project name="base" file="file://$PROJECT_DIR$/frontend/quizzer-frontend/features/base/project.json" />
-      <project name="client" file="file://$PROJECT_DIR$/frontend/quizzer-frontend/clients/client/project.json" />
       <project name="coding-quizzer" file="file://$PROJECT_DIR$/frontend/quizzer-frontend/apps/coding-quizzer/project.json" />
       <project name="ingest" file="file://$PROJECT_DIR$/frontend/quizzer-frontend/features/ingest/project.json" />
       <project name="question" file="file://$PROJECT_DIR$/frontend/quizzer-frontend/features/question/project.json" />

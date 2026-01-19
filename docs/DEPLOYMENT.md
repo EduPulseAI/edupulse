@@ -83,7 +83,7 @@ EduPulse uses a **fully event-driven architecture** with managed services and st
 | **bandit-engine** | Multi-armed bandit difficulty adaptation | 8080 | Internal | 2 CPU, 1Gi | Vertex AI integration |
 | **tip-service** | AI-powered hint generation via Gemini | 8080 | Internal | 1 CPU, 512Mi | Gemini API integration |
 | **content-adapter** | Dynamic content difficulty adjustment | 8080 | Internal | 500m CPU, 256Mi | Lightweight processor |
-| **realtime-gateway** | SSE gateway for real-time updates (Kafka → SSE fan-out ONLY, NO computation) | 8080 | Public | 1 CPU, 512Mi | Redis-backed routing, min 1 instance |
+| **sse-service** | SSE gateway for real-time updates (Kafka → SSE fan-out ONLY, NO computation) | 8080 | Public | 1 CPU, 512Mi | Redis-backed routing, min 1 instance |
 
 ### Confluent Cloud Managed Components
 
@@ -95,7 +95,7 @@ EduPulse uses a **fully event-driven architecture** with managed services and st
   - Windowed metrics (tumbling, sliding, session windows)
   - Stream joins (enrichment, temporal joins)
   - Pattern detection (Complex Event Processing)
-  - Produces derived topics consumed by Realtime Gateway and microservices
+  - Produces derived topics consumed by SSE Service and microservices
 
 ### GCP Resources Managed by Terraform
 
@@ -341,7 +341,7 @@ These are set in `terraform.tfvars` and passed to Cloud Run services:
 |----------------------|-----------------|------------------------------------------|
 | event-ingest-service | `all`           | Public internet (frontend calls)         |
 | quizzer              | `all`           | Public internet (quiz content API)       |
-| realtime-gateway     | `all`           | Public internet (SSE connections)        |
+| sse-service          | `all`           | Public internet (SSE connections)        |
 | bandit-engine        | `internal`      | Internal only (called by other services) |
 | tip-service          | `internal`      | Internal only (called by other services) |
 | content-adapter      | `internal`      | Internal only (called by other services) |
@@ -765,7 +765,7 @@ terraform output cloud_run_service_urls
 # Test public endpoints
 curl https://event-ingest-service-xyz-uc.a.run.app/actuator/health
 curl https://quizzer-xyz-uc.a.run.app/actuator/health
-curl https://realtime-gateway-xyz-uc.a.run.app/actuator/health
+curl https://sse-service-xyz-uc.a.run.app/actuator/health
 ```
 
 **Expected**: HTTP 200 with `{"status":"UP"}`
@@ -855,8 +855,8 @@ gcloud run services logs read tip-service --region us-central1 --limit 50
 **Test SSE connection**:
 
 ```bash
-# Get realtime-gateway URL
-GATEWAY_URL=$(gcloud run services describe realtime-gateway --region us-central1 --format='value(status.url)')
+# Get sse-service URL
+GATEWAY_URL=$(gcloud run services describe sse-service --region us-central1 --format='value(status.url)')
 
 # Test SSE endpoint
 curl -N -H "Accept: text/event-stream" $GATEWAY_URL/sse/student/test-student-123
