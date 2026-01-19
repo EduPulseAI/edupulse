@@ -4,6 +4,6 @@
     <option name="generatorAllowlist">
       <map />
     </option>
-    <option name="workspacePath" value="frontend/quiz-service-manager" />
+    <option name="workspacePath" value="frontend/quizzer-frontend" />
   </component>
 </project>

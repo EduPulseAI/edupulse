@@ -9,7 +9,7 @@ PROJECT := edupulse-483220
 REPOSITORY := edupulse
 
 # Services
-SERVICES := quiz-service engagement-service
+SERVICES := quiz-service engagement-service sse-service
 
 help:
 	@echo "EduPulse Backend Build Commands"
@@ -65,7 +65,7 @@ docker-push:
 	@echo "Building and pushing Docker images..."
 	@../scripts/docker/build-images.sh --push
 
-# Individual service targets
+# quiz service targets
 build-quiz-service:
 	cd quiz-service && ./mvnw clean install
 
@@ -78,7 +78,7 @@ docker-build-quiz-service:
 docker-push-quiz-service:
 	../scripts/docker/build-images.sh --push quiz-service
 
-
+# Engagement service targets
 build-engagement-service:
 	cd engagement-service && ./mvnw clean install
 
@@ -91,6 +91,19 @@ docker-build-engagement-service:
 docker-push-engagement-service:
 	../scripts/docker/build-images.sh --push engagement-service
 
+# SSE service targets
+build-sse-service:
+	cd sse-service && ./mvnw clean install
+
+test-sse-service:
+	cd sse-service && ./mvnw test
+
+docker-build-sse-service:
+	../scripts/docker/build-images.sh sse-service
+
+docker-push-sse-service:
+	../scripts/docker/build-images.sh --push sse-service
+
 # Quick shortcuts
 bq: build-quiz-service
 dbq: docker-build-quiz-service
@@ -99,3 +112,7 @@ dpq: docker-push-quiz-service
 be: build-engagement-service
 dbe: docker-build-engagement-service
 dpe: docker-push-engagement-service
+
+bs: build-sse-service
+dbs: docker-build-sse-service
+dps: docker-push-sse-service

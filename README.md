@@ -39,7 +39,7 @@ learning sessions using AI-driven decision-making powered by Confluent Kafka.
 - **Messaging:** Confluent Kafka, Schema Registry, Avro
 - **AI/ML:** Vertex AI, Google Gemini
 - **Data:** PostgreSQL, Redis
-- **Deployment:** Docker, Google Cloud (GKE, Cloud SQL, Memorystore), Confluent Cloud
+- **Deployment:** Docker, Google Cloud (Cloud SQL, Memorystore), Confluent Cloud
 
 ---
 

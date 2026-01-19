@@ -4,3 +4,6 @@
 [submodule "backend/quiz-service"]
 	path = backend/quiz-service
 	url = git@github.com:EduPulseAI/quiz-service.git
+[submodule "backend/sse-service"]
+	path = backend/sse-service
+	url = git@github.com:EduPulseAI/sse-service.git

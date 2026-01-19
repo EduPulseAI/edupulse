@@ -8,6 +8,8 @@
         <option value="$PROJECT_DIR$/backend/common/pom.xml" />
         <option value="$PROJECT_DIR$/backend/quiz-service/pom.xml" />
         <option value="$PROJECT_DIR$/backend/engagement-service/pom.xml" />
+        <option value="$PROJECT_DIR$/backend/real-time-gateway/pom.xml" />
+        <option value="$PROJECT_DIR$/backend/sse-service/pom.xml" />
       </list>
     </option>
   </component>
