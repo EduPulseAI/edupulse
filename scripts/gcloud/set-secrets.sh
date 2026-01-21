@@ -247,6 +247,45 @@ else
     set_secret "jwt-signing-key" "${jwt_signing_key}" "JWT signing key for session tokens" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
 fi
 
+echo ""
+
+# Redis Configuration
+log_info "=== Redis Memorystore Configuration ==="
+total_secrets=$((total_secrets + 3))
+
+if redis_host=$(load_env_var "REDIS_HOST" 2>/dev/null); then
+    if [ -n "${redis_host}" ]; then
+        set_secret "redis-host" "${redis_host}" "Redis Memorystore host IP for caching" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
+    else
+        log_warning "Skipping redis-host (empty value - set after terraform apply)"
+        failed_secrets=$((failed_secrets + 1))
+    fi
+else
+    log_warning "Skipping redis-host (not found - set after terraform apply)"
+    failed_secrets=$((failed_secrets + 1))
+fi
+
+if redis_port=$(load_env_var "REDIS_PORT" 2>/dev/null); then
+    set_secret "redis-port" "${redis_port}" "Redis Memorystore port" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
+else
+    # Default Redis port
+    redis_port="6379"
+    log_info "Using default Redis port: ${redis_port}"
+    set_secret "redis-port" "${redis_port}" "Redis Memorystore port" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
+fi
+
+if redis_password=$(load_env_var "REDIS_PASSWORD" 2>/dev/null); then
+    if [ -n "${redis_password}" ]; then
+        set_secret "redis-password" "${redis_password}" "Redis AUTH password for authentication" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
+    else
+        log_warning "Skipping redis-password (empty value - set after terraform apply with: terraform output -raw redis_auth_string)"
+        failed_secrets=$((failed_secrets + 1))
+    fi
+else
+    log_warning "Skipping redis-password (not found - set after terraform apply with: terraform output -raw redis_auth_string)"
+    failed_secrets=$((failed_secrets + 1))
+fi
+
 # -----------------------------------------------------------------------------
 # Summary
 # -----------------------------------------------------------------------------

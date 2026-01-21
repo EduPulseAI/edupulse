@@ -143,14 +143,20 @@ variable "vpc_connector_name" {
   default     = null
 }
 
+variable "enable_vpc_access" {
+  description = "Enable VPC access for this service (must be true if vpc_connector_name is set)"
+  type        = bool
+  default     = false
+}
+
 variable "vpc_egress_setting" {
-  description = "VPC egress setting (all-traffic or private-ranges-only)"
+  description = "VPC egress setting (ALL_TRAFFIC or PRIVATE_RANGES_ONLY)"
   type        = string
-  default     = "private-ranges-only"
+  default     = "PRIVATE_RANGES_ONLY"
 
   validation {
-    condition     = contains(["all-traffic", "private-ranges-only"], var.vpc_egress_setting)
-    error_message = "VPC egress setting must be one of: all-traffic, private-ranges-only."
+    condition     = contains(["ALL_TRAFFIC", "PRIVATE_RANGES_ONLY"], var.vpc_egress_setting)
+    error_message = "VPC egress setting must be one of: ALL_TRAFFIC, PRIVATE_RANGES_ONLY."
   }
 }
 

@@ -43,6 +43,8 @@ services = {
       GCP_REGION             = "us-central1"
       GCP_PROJECT_ID         = "edupulse-483220"
       GEMINI_MODEL           = "gemini-2.5-flash"
+      # Redis SSL is required for Memorystore with transit encryption
+      REDIS_SSL_ENABLED      = "true"
     }
     secret_env_vars = {
       BOOTSTRAP_SERVERS = {
@@ -87,6 +89,19 @@ services = {
       }
       JWT_SECRET = {
         secret_name = "jwt-signing-key"
+        version     = "latest"
+      }
+      # Redis Memorystore configuration
+      REDIS_HOST = {
+        secret_name = "redis-host"
+        version     = "latest"
+      }
+      REDIS_PORT = {
+        secret_name = "redis-port"
+        version     = "latest"
+      }
+      REDIS_PASSWORD = {
+        secret_name = "redis-password"
         version     = "latest"
       }
     }
@@ -372,6 +387,18 @@ secrets = [
   {
     name        = "postgres-host"
     description = "PostgreSQL database host for quiz service"
+  },
+  {
+    name        = "redis-host"
+    description = "Redis Memorystore host IP for caching"
+  },
+  {
+    name        = "redis-port"
+    description = "Redis Memorystore port"
+  },
+  {
+    name        = "redis-password"
+    description = "Redis AUTH password for authentication"
   }
 ]
 
@@ -386,8 +413,27 @@ vertex_ai_endpoint_id = "" # Leave empty if not yet deployed
 # Networking
 # -----------------------------------------------------------------------------
 
-enable_vpc_connector       = false # Not needed for Confluent Cloud (public endpoints)
-vpc_connector_name         = "edupulse-dev-connector"
+network_name               = "default"
+enable_vpc_connector       = true # Required for Redis Memorystore access
+vpc_connector_name         = "edupulse-dev-vpc"
 vpc_connector_cidr         = "10.8.0.0/28"
 vpc_connector_machine_type = "e2-micro"
-vpc_egress_setting         = "private-ranges-only"
+vpc_connector_min_instances = 2
+vpc_connector_max_instances = 3
+vpc_egress_setting         = "PRIVATE_RANGES_ONLY"
+
+# -----------------------------------------------------------------------------
+# Redis Memorystore
+# -----------------------------------------------------------------------------
+
+enable_redis                            = true
+redis_instance_name                     = "edupulse-redis-dev"
+redis_tier                              = "BASIC" # Use STANDARD_HA for production
+redis_memory_size_gb                    = 1
+redis_version                           = "REDIS_7_0"
+redis_auth_enabled                      = true
+redis_transit_encryption_mode           = "SERVER_AUTHENTICATION"
+redis_maxmemory_policy                  = "volatile-lru"
+redis_maintenance_window_day            = "SUNDAY"
+redis_maintenance_window_hour           = 2
+redis_create_private_service_connection = true

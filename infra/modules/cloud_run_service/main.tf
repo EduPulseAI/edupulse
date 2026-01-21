@@ -107,8 +107,10 @@ resource "google_cloud_run_v2_service" "service" {
     }
 
     # VPC connector (optional, for private resource access)
+    # Note: Use enable_vpc_access (static bool) instead of checking vpc_connector_name != null
+    # to avoid "block count changed" errors when vpc_connector_name is a computed value
     dynamic "vpc_access" {
-      for_each = var.vpc_connector_name != null ? [1] : []
+      for_each = var.enable_vpc_access ? [1] : []
       content {
         connector = var.vpc_connector_name
         egress    = var.vpc_egress_setting

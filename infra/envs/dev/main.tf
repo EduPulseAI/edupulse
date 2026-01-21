@@ -214,8 +214,11 @@ module "cloud_run_services" {
   # Network configuration
   ingress = each.value.ingress
 
-  # VPC connector (optional, not needed for Confluent Cloud)
-  vpc_connector_name = var.enable_vpc_connector ? var.vpc_connector_name : null
+  # VPC connector (required for Redis Memorystore access)
+  # Note: enable_vpc_access uses static bool to avoid "block count changed" errors
+  # when vpc_connector_name is a computed value from the networking module
+  enable_vpc_access  = var.enable_vpc_connector
+  vpc_connector_name = var.enable_vpc_connector ? module.networking[0].connector_self_link : null
   vpc_egress_setting = var.vpc_egress_setting
 
   # Environment variables
@@ -258,20 +261,73 @@ module "cloud_run_services" {
 }
 
 # -----------------------------------------------------------------------------
-# VPC Connector (Optional - Not needed for Confluent Cloud)
+# VPC Connector (Required for Redis Memorystore access)
 # -----------------------------------------------------------------------------
 
-# VPC Connector is not required for Confluent Cloud access
-# Confluent Cloud uses public endpoints with TLS and API key authentication
-# Only enable if you need to access private GCP resources (e.g., Cloud SQL, Redis)
+# VPC Connector enables Cloud Run to connect to private VPC resources
+# Required for: Redis Memorystore, Cloud SQL (private IP), internal services
 
-# module "vpc_connector" {
-#   source = "../../modules/networking"
-#   count  = var.enable_vpc_connector ? 1 : 0
-#
-#   project_id    = var.project_id
-#   region        = var.region
-#   connector_name = var.vpc_connector_name
-#   cidr_range    = var.vpc_connector_cidr
-#   machine_type  = var.vpc_connector_machine_type
-# }
+module "networking" {
+  source = "../../modules/networking"
+  count  = var.enable_vpc_connector ? 1 : 0
+
+  project_id     = var.project_id
+  region         = var.region
+  connector_name = var.vpc_connector_name
+  network_name   = var.network_name
+
+  # Subnet configuration for VPC connector
+  create_connector_subnet = true
+  connector_subnet_cidr   = var.vpc_connector_cidr
+
+  # Connector sizing (use e2-micro for dev, e2-standard-4 for prod)
+  connector_machine_type  = var.vpc_connector_machine_type
+  connector_min_instances = var.vpc_connector_min_instances
+  connector_max_instances = var.vpc_connector_max_instances
+
+  depends_on = [
+    google_project_service.required_apis
+  ]
+}
+
+# -----------------------------------------------------------------------------
+# Redis Memorystore
+# Managed Redis for caching and session storage
+# -----------------------------------------------------------------------------
+
+module "redis" {
+  source = "../../modules/redis"
+  count  = var.enable_redis ? 1 : 0
+
+  project_id    = var.project_id
+  region        = var.region
+  instance_name = var.redis_instance_name
+  network_name  = var.network_name
+
+  # Instance configuration
+  tier           = var.redis_tier
+  memory_size_gb = var.redis_memory_size_gb
+  redis_version  = var.redis_version
+
+  # Security
+  auth_enabled            = var.redis_auth_enabled
+  transit_encryption_mode = var.redis_transit_encryption_mode
+
+  # Eviction policy
+  maxmemory_policy = var.redis_maxmemory_policy
+
+  # Maintenance window (Sunday 2 AM UTC)
+  maintenance_window_day  = var.redis_maintenance_window_day
+  maintenance_window_hour = var.redis_maintenance_window_hour
+
+  # Private service connection
+  create_private_service_connection = var.redis_create_private_service_connection
+
+  # Labels
+  labels = local.common_labels
+
+  depends_on = [
+    google_project_service.required_apis,
+    module.networking
+  ]
+}

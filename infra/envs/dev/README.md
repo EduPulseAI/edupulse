@@ -91,7 +91,7 @@ services = {
   # Uncomment to enable additional services:
   # bandit-engine = { ... }
   # tip-service = { ... }
-  # realtime-gateway = { ... }
+  # sse-service = { ... }
 }
 ```
 
