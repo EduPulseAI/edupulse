@@ -166,6 +166,8 @@ services = {
       SPRING_PROFILES_ACTIVE = "prod"
       SERVER_PORT            = "8080"
       LOGGING_LEVEL_ROOT     = "INFO"
+      # Redis SSL is required for Memorystore with transit encryption
+      REDIS_SSL_ENABLED      = "true"
     }
     secret_env_vars = {
       BOOTSTRAP_SERVERS = {
@@ -190,6 +192,19 @@ services = {
       }
       SCHEMA_REGISTRY_API_SECRET = {
         secret_name = "schema-registry-api-secret"
+        version     = "latest"
+      }
+      # Redis Memorystore configuration
+      REDIS_HOST = {
+        secret_name = "redis-host"
+        version     = "latest"
+      }
+      REDIS_PORT = {
+        secret_name = "redis-port"
+        version     = "latest"
+      }
+      REDIS_PASSWORD = {
+        secret_name = "redis-password"
         version     = "latest"
       }
     }
