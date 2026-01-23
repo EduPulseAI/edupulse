@@ -230,7 +230,7 @@ module "cloud_run_services" {
   startup_probe_initial_delay     = 0
   startup_probe_timeout           = 3
   startup_probe_period            = 10
-  startup_probe_failure_threshold = 3
+  startup_probe_failure_threshold = 6
 
   liveness_probe_path              = "/actuator/health/liveness"
   liveness_probe_initial_delay     = 0
@@ -256,7 +256,8 @@ module "cloud_run_services" {
   depends_on = [
     google_project_service.required_apis,
     module.iam,
-    module.artifact_registry
+    module.artifact_registry,
+    module.redis,
   ]
 }
 
@@ -329,5 +330,46 @@ module "redis" {
   depends_on = [
     google_project_service.required_apis,
     module.networking
+  ]
+}
+
+# -----------------------------------------------------------------------------
+# Redis Secret Versions (Auto-updated on Redis IP change)
+# Automatically sync Redis connection details to Secret Manager
+# -----------------------------------------------------------------------------
+
+resource "google_secret_manager_secret_version" "redis_host" {
+  count = var.enable_redis ? 1 : 0
+
+  secret      = module.secret_manager.secret_ids["redis-host"]
+  secret_data = module.redis[0].host
+
+  depends_on = [
+    module.secret_manager,
+    module.redis
+  ]
+}
+
+resource "google_secret_manager_secret_version" "redis_port" {
+  count = var.enable_redis ? 1 : 0
+
+  secret      = module.secret_manager.secret_ids["redis-port"]
+  secret_data = tostring(module.redis[0].port)
+
+  depends_on = [
+    module.secret_manager,
+    module.redis
+  ]
+}
+
+resource "google_secret_manager_secret_version" "redis_password" {
+  count = var.enable_redis ? 1 : 0
+
+  secret      = module.secret_manager.secret_ids["redis-password"]
+  secret_data = module.redis[0].auth_string
+
+  depends_on = [
+    module.secret_manager,
+    module.redis
   ]
 }

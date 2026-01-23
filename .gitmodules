@@ -7,3 +7,6 @@
 [submodule "backend/sse-service"]
 	path = backend/sse-service
 	url = git@github.com:EduPulseAI/sse-service.git
+[submodule "backend/profile-service"]
+	path = backend/profile-service
+	url = git@github.com:EduPulseAI/profile-service.git

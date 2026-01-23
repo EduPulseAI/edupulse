@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="docker@localhost" uuid="4838b2ab-c9ba-4325-aa2b-3dd3e6c9761e">
+    <data-source source="LOCAL" name="postgres@localhost" uuid="6eab346b-ec0f-4781-8112-1b08fbf8873a">
       <driver-ref>postgresql</driver-ref>
       <synchronize>true</synchronize>
       <imported>true</imported>
+      <remarks>$PROJECT_DIR$/backend/profile-service/src/main/resources/application-local.yaml</remarks>
       <jdbc-driver>org.postgresql.Driver</jdbc-driver>
       <jdbc-url>jdbc:postgresql://localhost:5432/postgres</jdbc-url>
       <jdbc-additional-properties>
@@ -14,11 +15,13 @@
       </jdbc-additional-properties>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
-    <data-source source="LOCAL" name="neondb@ep-broad-rain-adwuwcjs-pooler.c-2.us-east-1.aws.neon.tech" uuid="6ee98b21-0415-4f22-801f-15dd93a0df90">
-      <driver-ref>postgresql</driver-ref>
+    <data-source source="LOCAL" name="0@redis" uuid="b9e92d24-f0b6-42ee-999b-3174f418a965">
+      <driver-ref>redis</driver-ref>
       <synchronize>true</synchronize>
-      <jdbc-driver>org.postgresql.Driver</jdbc-driver>
-      <jdbc-url>jdbc:postgresql://ep-broad-rain-adwuwcjs-pooler.c-2.us-east-1.aws.neon.tech:5432/neondb</jdbc-url>
+      <imported>true</imported>
+      <remarks>$PROJECT_DIR$/backend/quiz-service/src/main/resources/application-docker.yaml</remarks>
+      <jdbc-driver>jdbc.RedisDriver</jdbc-driver>
+      <jdbc-url>jdbc:redis://redis:6379/0</jdbc-url>
       <jdbc-additional-properties>
         <property name="com.intellij.clouds.kubernetes.db.host.port" />
         <property name="com.intellij.clouds.kubernetes.db.enabled" value="false" />
@@ -26,22 +29,16 @@
       </jdbc-additional-properties>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
-    <data-source source="LOCAL" name="0@localhost" uuid="e8a36e36-55af-4e06-83be-7828ab720f89">
-      <driver-ref>redis</driver-ref>
+    <data-source source="LOCAL" name="edupulse@ep-broad-rain-adwuwcjs-pooler.c-2.us-east-1.aws.neon.tech" uuid="0a58d6db-9c09-4815-baf0-86281fb3ea87">
+      <driver-ref>postgresql</driver-ref>
       <synchronize>true</synchronize>
-      <imported>true</imported>
-      <remarks>$PROJECT_DIR$/backend/quiz-service/src/main/resources/application.yaml</remarks>
-      <jdbc-driver>jdbc.RedisDriver</jdbc-driver>
-      <jdbc-url>jdbc:redis://localhost:6379/0</jdbc-url>
-      <working-dir>$ProjectFileDir$</working-dir>
-    </data-source>
-    <data-source source="LOCAL" name="0@redis" uuid="0cb20e9d-f73d-4042-b79e-36b67829e8c1">
-      <driver-ref>redis</driver-ref>
-      <synchronize>true</synchronize>
-      <imported>true</imported>
-      <remarks>$PROJECT_DIR$/backend/quiz-service/src/main/resources/application-docker.yaml</remarks>
-      <jdbc-driver>jdbc.RedisDriver</jdbc-driver>
-      <jdbc-url>jdbc:redis://redis:6379/0</jdbc-url>
+      <jdbc-driver>org.postgresql.Driver</jdbc-driver>
+      <jdbc-url>jdbc:postgresql://ep-broad-rain-adwuwcjs-pooler.c-2.us-east-1.aws.neon.tech:5432/edupulse</jdbc-url>
+      <jdbc-additional-properties>
+        <property name="com.intellij.clouds.kubernetes.db.host.port" />
+        <property name="com.intellij.clouds.kubernetes.db.enabled" value="false" />
+        <property name="com.intellij.clouds.kubernetes.db.container.port" />
+      </jdbc-additional-properties>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
   </component>

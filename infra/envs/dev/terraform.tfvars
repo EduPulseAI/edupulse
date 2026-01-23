@@ -210,6 +210,46 @@ services = {
     }
   }
 
+  profile-service = {
+    image_name    = "profile-service"
+    image_tag     = "latest"
+    port          = 8080
+    cpu           = "1000m"
+    memory        = "1Gi"
+    min_instances = 0
+    max_instances = 10
+    concurrency   = 80
+    timeout       = 60
+    ingress       = "INGRESS_TRAFFIC_ALL"
+    env_vars = {
+      SPRING_PROFILES_ACTIVE = "prod"
+      SERVER_PORT            = "8080"
+      LOGGING_LEVEL_ROOT     = "INFO"
+    }
+    secret_env_vars = {
+      DATABASE_USER = {
+        secret_name = "postgres-user"
+        version     = "latest"
+      }
+      DATABASE_PASSWORD = {
+        secret_name = "postgres-password"
+        version     = "latest"
+      }
+      DATABASE_NAME = {
+        secret_name = "postgres-database"
+        version     = "latest"
+      }
+      DATABASE_HOST = {
+        secret_name = "postgres-host"
+        version     = "latest"
+      }
+      JWT_SECRET = {
+        secret_name = "jwt-signing-key"
+        version     = "latest"
+      }
+    }
+  }
+
   # bandit-engine = {
   #   image_name    = "bandit-engine"
   #   image_tag     = "latest"

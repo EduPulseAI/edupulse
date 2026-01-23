@@ -41,7 +41,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$(cd "${SCRIPT_DIR}/../../backend" && pwd)"
 
 # Available services
-ALL_SERVICES=("quiz-service" "engagement-service" "sse-service")
+ALL_SERVICES=("quiz-service" "engagement-service" "sse-service", "profile-service")
 SERVICES_TO_BUILD=()
 
 # Function to print colored output

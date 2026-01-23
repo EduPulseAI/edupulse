@@ -53,6 +53,11 @@ resource "google_service_networking_connection" "private_vpc_connection" {
   service                 = "servicenetworking.googleapis.com"
   reserved_peering_ranges = [google_compute_global_address.private_ip_range[0].name]
 
+  # Prevent recreation when peering ranges change - the connection is a singleton
+  lifecycle {
+    ignore_changes = [reserved_peering_ranges]
+  }
+
   depends_on = [
     google_project_service.servicenetworking_api,
     google_compute_global_address.private_ip_range
@@ -117,7 +122,7 @@ resource "google_redis_instance" "redis" {
   # Labels
   labels = var.labels
 
-  # Lifecycle
+  # Lifecycle - prevent unnecessary recreation
   lifecycle {
     prevent_destroy = false
   }

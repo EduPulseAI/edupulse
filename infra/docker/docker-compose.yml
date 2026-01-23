@@ -1,32 +1,7 @@
 name: edupulse
 services:
-  ingest:
-    image: us-central1-docker.pkg.dev/edupulse-483220/edupulse/event-ingest-service:0.0.1-SNAPSHOT
-    env_file:
-      - ../../.env
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
-      SCHEMA_REGISTRY_URL: ${SCHEMA_REGISTRY_URL}
-      SCHEMA_REGISTRY_API_KEY: ${SCHEMA_REGISTRY_API_KEY}
-      SCHEMA_REGISTRY_API_SECRET: ${SCHEMA_REGISTRY_API_SECRET}
-      KAFKA_API_KEY: ${KAFKA_API_KEY}
-      KAFKA_API_SECRET: ${KAFKA_API_SECRET}
-      SPRING_KAFKA_PROPERTIES_SECURITY_PROTOCOL: SASL_SSL
-      SPRING_KAFKA_PROPERTIES_SASL_MECHANISM: PLAIN
-      SPRING_KAFKA_PROPERTIES_SASL_JAAS_CONFIG: org.apache.kafka.common.security.plain.PlainLoginModule required username='${KAFKA_API_KEY}' password='${KAFKA_API_SECRET}';
-      APP_CLIENTS_QUIZZER_URL: http://quizzer:8080
-    networks:
-      - postgres
-      - microservice
-      - kafka-net
-    ports:
-      - "8081:8080"
-    depends_on:
-      - postgres
-
-  quizzer:
-    image: us-central1-docker.pkg.dev/edupulse-483220/edupulse/quizzer:0.0.2-SNAPSHOT
+  quiz_service:
+    image: us-central1-docker.pkg.dev/edupulse-483220/edupulse/quiz_service:latest
     env_file:
       - ../../.env
     environment:

@@ -9,7 +9,7 @@ PROJECT := edupulse-483220
 REPOSITORY := edupulse
 
 # Services
-SERVICES := quiz-service engagement-service sse-service
+SERVICES := quiz-service engagement-service sse-service profile-service
 
 help:
 	@echo "EduPulse Backend Build Commands"
@@ -104,6 +104,19 @@ docker-build-sse-service:
 docker-push-sse-service:
 	../scripts/docker/build-images.sh --push sse-service
 
+# Profile service targets
+build-profile-service:
+	cd profile-service && ./mvnw clean install
+
+test-profile-service:
+	cd profile-service && ./mvnw test
+
+docker-build-profile-service:
+	../scripts/docker/build-images.sh profile-service
+
+docker-push-profile-service:
+	../scripts/docker/build-images.sh --push profile-service
+
 # Quick shortcuts
 bq: build-quiz-service
 dbq: docker-build-quiz-service
@@ -116,3 +129,7 @@ dpe: docker-push-engagement-service
 bs: build-sse-service
 dbs: docker-build-sse-service
 dps: docker-push-sse-service
+
+bp: build-profile-service
+dbp: docker-build-profile-service
+dpp: docker-push-profile-service

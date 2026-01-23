@@ -208,9 +208,9 @@ variable "startup_probe_period" {
 }
 
 variable "startup_probe_failure_threshold" {
-  description = "Failure threshold for startup probe"
+  description = "Failure threshold for startup probe (6 = 60s window for Spring Boot apps)"
   type        = number
-  default     = 3
+  default     = 6
 }
 
 variable "liveness_probe_path" {
