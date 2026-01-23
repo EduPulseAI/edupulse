@@ -10,3 +10,6 @@
 [submodule "backend/profile-service"]
 	path = backend/profile-service
 	url = git@github.com:EduPulseAI/profile-service.git
+[submodule "backend/engagement-service"]
+	path = backend/engagement-service
+	url = git@github.com:EduPulseAI/engagement-service.git
