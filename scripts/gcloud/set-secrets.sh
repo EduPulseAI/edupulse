@@ -23,7 +23,7 @@ set -u  # Exit on undefined variable
 
 PROJECT_ID="${1:-}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 ENV_FILE="${PROJECT_ROOT}/.env"
 
 # Color codes for output
@@ -225,6 +225,26 @@ else
     set_secret "postgres-database" "${database_name}" "PostgreSQL database name for quiz service" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
 fi
 
+# Extract database name from host or use default
+if database_name=$(load_env_var "PROFILE_DATABASE_NAME" 2>/dev/null); then
+    set_secret "profile-postgres-database" "${database_name}" "PostgreSQL database name for profile service" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
+else
+    # Default database name if not specified
+    database_name="edupulse"
+    log_info "Using default database name: ${database_name}"
+    set_secret "profile-postgres-database" "${database_name}" "PostgreSQL database name for profile service" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
+fi
+
+# Extract database name from host or use default
+if database_name=$(load_env_var "AUTH_DATABASE_NAME" 2>/dev/null); then
+    set_secret "auth-postgres-database" "${database_name}" "PostgreSQL database name for auth service" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
+else
+    # Default database name if not specified
+    database_name="edupulse"
+    log_info "Using default database name: ${database_name}"
+    set_secret "auth-postgres-database" "${database_name}" "PostgreSQL database name for auth service" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
+fi
+
 echo ""
 
 # AI Configuration (Optional)
@@ -249,40 +269,39 @@ fi
 
 echo ""
 
-# Redis Configuration
-log_info "=== Redis Memorystore Configuration ==="
+# Redis Configuration (Upstash)
+log_info "=== Redis Configuration (Upstash) ==="
 total_secrets=$((total_secrets + 3))
 
 if redis_host=$(load_env_var "REDIS_HOST" 2>/dev/null); then
     if [ -n "${redis_host}" ]; then
-        set_secret "redis-host" "${redis_host}" "Redis Memorystore host IP for caching" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
+        set_secret "redis-host" "${redis_host}" "Upstash Redis host for caching" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
     else
-        log_warning "Skipping redis-host (empty value - set after terraform apply)"
+        log_warning "Skipping redis-host (empty value - set REDIS_HOST in .env from Upstash console)"
         failed_secrets=$((failed_secrets + 1))
     fi
 else
-    log_warning "Skipping redis-host (not found - set after terraform apply)"
+    log_warning "Skipping redis-host (not found - set REDIS_HOST in .env from Upstash console)"
     failed_secrets=$((failed_secrets + 1))
 fi
 
 if redis_port=$(load_env_var "REDIS_PORT" 2>/dev/null); then
-    set_secret "redis-port" "${redis_port}" "Redis Memorystore port" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
+    set_secret "redis-port" "${redis_port}" "Upstash Redis port" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
 else
-    # Default Redis port
     redis_port="6379"
     log_info "Using default Redis port: ${redis_port}"
-    set_secret "redis-port" "${redis_port}" "Redis Memorystore port" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
+    set_secret "redis-port" "${redis_port}" "Upstash Redis port" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
 fi
 
 if redis_password=$(load_env_var "REDIS_PASSWORD" 2>/dev/null); then
     if [ -n "${redis_password}" ]; then
-        set_secret "redis-password" "${redis_password}" "Redis AUTH password for authentication" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
+        set_secret "redis-password" "${redis_password}" "Upstash Redis AUTH password" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
     else
-        log_warning "Skipping redis-password (empty value - set after terraform apply with: terraform output -raw redis_auth_string)"
+        log_warning "Skipping redis-password (empty value - set REDIS_PASSWORD in .env from Upstash console)"
         failed_secrets=$((failed_secrets + 1))
     fi
 else
-    log_warning "Skipping redis-password (not found - set after terraform apply with: terraform output -raw redis_auth_string)"
+    log_warning "Skipping redis-password (not found - set REDIS_PASSWORD in .env from Upstash console)"
     failed_secrets=$((failed_secrets + 1))
 fi
 

@@ -114,7 +114,7 @@ variable "network_name" {
 }
 
 variable "enable_vpc_connector" {
-  description = "Enable VPC Serverless Connector for Cloud Run egress (required for Redis/private resources)"
+  description = "Enable VPC Serverless Connector for Cloud Run egress (required for private VPC resources)"
   type        = bool
   default     = false
 }
@@ -161,81 +161,6 @@ variable "vpc_egress_setting" {
 }
 
 # -----------------------------------------------------------------------------
-# Redis Memorystore Configuration
-# -----------------------------------------------------------------------------
-
-variable "enable_redis" {
-  description = "Enable Redis Memorystore for caching"
-  type        = bool
-  default     = false
-}
-
-variable "redis_instance_name" {
-  description = "Name of the Redis Memorystore instance"
-  type        = string
-  default     = "edupulse-redis"
-}
-
-variable "redis_tier" {
-  description = "Redis tier: BASIC (no HA) or STANDARD_HA (high availability)"
-  type        = string
-  default     = "BASIC"
-
-  validation {
-    condition     = contains(["BASIC", "STANDARD_HA"], var.redis_tier)
-    error_message = "Redis tier must be BASIC or STANDARD_HA."
-  }
-}
-
-variable "redis_memory_size_gb" {
-  description = "Redis memory size in GB (1-300)"
-  type        = number
-  default     = 1
-}
-
-variable "redis_version" {
-  description = "Redis version"
-  type        = string
-  default     = "REDIS_7_0"
-}
-
-variable "redis_auth_enabled" {
-  description = "Enable Redis AUTH for password protection"
-  type        = bool
-  default     = true
-}
-
-variable "redis_transit_encryption_mode" {
-  description = "Transit encryption: DISABLED or SERVER_AUTHENTICATION"
-  type        = string
-  default     = "SERVER_AUTHENTICATION"
-}
-
-variable "redis_maxmemory_policy" {
-  description = "Redis eviction policy"
-  type        = string
-  default     = "volatile-lru"
-}
-
-variable "redis_maintenance_window_day" {
-  description = "Day for maintenance window (e.g., SUNDAY)"
-  type        = string
-  default     = "SUNDAY"
-}
-
-variable "redis_maintenance_window_hour" {
-  description = "Hour for maintenance window (0-23 UTC)"
-  type        = number
-  default     = 2
-}
-
-variable "redis_create_private_service_connection" {
-  description = "Create private service connection for Redis (set false if already exists)"
-  type        = bool
-  default     = true
-}
-
-# -----------------------------------------------------------------------------
 # API Enablement
 # -----------------------------------------------------------------------------
 
@@ -249,9 +174,7 @@ variable "apis_to_enable" {
     "cloudresourcemanager.googleapis.com",
     "iam.googleapis.com",
     "compute.googleapis.com",
-    "redis.googleapis.com",
     "vpcaccess.googleapis.com",
-    "servicenetworking.googleapis.com",
   ]
 }
 

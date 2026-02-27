@@ -41,7 +41,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$(cd "${SCRIPT_DIR}/../../backend" && pwd)"
 
 # Available services
-ALL_SERVICES=("quiz-service" "engagement-service" "sse-service", "profile-service")
+ALL_SERVICES=("quiz-service" "engagement-service" "sse-service" "profile-service" "auth-service")
 SERVICES_TO_BUILD=()
 
 # Function to print colored output
@@ -172,7 +172,7 @@ build_service_image() {
     print_info "Building image: ${versioned_image}"
 
     # Build the image with Maven
-    if ./mvnw -Dimage.name="${versioned_image}" -DskipTests spring-boot:build-image; then
+    if ./mvnw -Dimage.name="${versioned_image}" spring-boot:build-image -DskipTests; then
         print_success "Built ${versioned_image}"
     else
         print_error "Failed to build ${service}"

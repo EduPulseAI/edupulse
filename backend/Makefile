@@ -9,7 +9,7 @@ PROJECT := edupulse-483220
 REPOSITORY := edupulse
 
 # Services
-SERVICES := quiz-service engagement-service sse-service profile-service
+SERVICES := quiz-service engagement-service sse-service profile-service auth-service
 
 help:
 	@echo "EduPulse Backend Build Commands"
@@ -65,6 +65,12 @@ docker-push:
 	@echo "Building and pushing Docker images..."
 	@../scripts/docker/build-images.sh --push
 
+deploy:
+	@echo "Deploying services..."
+	@../scripts/gcloud/deploy-service.sh
+
+
+
 # quiz service targets
 build-quiz-service:
 	cd quiz-service && ./mvnw clean install
@@ -117,6 +123,20 @@ docker-build-profile-service:
 docker-push-profile-service:
 	../scripts/docker/build-images.sh --push profile-service
 
+
+# Auth service targets
+build-auth-service:
+	cd auth-service && ./mvnw clean install
+
+test-auth-service:
+	cd auth-service && ./mvnw test
+
+docker-build-auth-service:
+	../scripts/docker/build-images.sh auth-service
+
+docker-push-auth-service:
+	../scripts/docker/build-images.sh --push auth-service
+
 # Quick shortcuts
 bq: build-quiz-service
 dbq: docker-build-quiz-service
@@ -133,3 +153,8 @@ dps: docker-push-sse-service
 bp: build-profile-service
 dbp: docker-build-profile-service
 dpp: docker-push-profile-service
+
+
+ba: build-auth-service
+dba: docker-build-auth-service
+dpa: docker-push-auth-service

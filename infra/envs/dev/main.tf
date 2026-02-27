@@ -160,7 +160,7 @@ module "vertex_ai" {
   # Only include service accounts that are actually deployed
   # Use service account emails directly from IAM module (computed)
   service_account_emails = [
-    for service_name in ["quiz-service", "bandit-engine", "tip-service"] :
+    for service_name in ["quiz-service", "bandit-engine", "tip-service", "profile-service"] :
     "${service_name}-sa@${var.project_id}.iam.gserviceaccount.com"
     if contains(keys(var.services), service_name)
   ]
@@ -214,7 +214,7 @@ module "cloud_run_services" {
   # Network configuration
   ingress = each.value.ingress
 
-  # VPC connector (required for Redis Memorystore access)
+  # VPC connector (for private VPC resource access)
   # Note: enable_vpc_access uses static bool to avoid "block count changed" errors
   # when vpc_connector_name is a computed value from the networking module
   enable_vpc_access  = var.enable_vpc_connector
@@ -257,16 +257,15 @@ module "cloud_run_services" {
     google_project_service.required_apis,
     module.iam,
     module.artifact_registry,
-    module.redis,
   ]
 }
 
 # -----------------------------------------------------------------------------
-# VPC Connector (Required for Redis Memorystore access)
+# VPC Connector
 # -----------------------------------------------------------------------------
 
 # VPC Connector enables Cloud Run to connect to private VPC resources
-# Required for: Redis Memorystore, Cloud SQL (private IP), internal services
+# Required for: Cloud SQL (private IP), internal services
 
 module "networking" {
   source = "../../modules/networking"
@@ -291,85 +290,3 @@ module "networking" {
   ]
 }
 
-# -----------------------------------------------------------------------------
-# Redis Memorystore
-# Managed Redis for caching and session storage
-# -----------------------------------------------------------------------------
-
-module "redis" {
-  source = "../../modules/redis"
-  count  = var.enable_redis ? 1 : 0
-
-  project_id    = var.project_id
-  region        = var.region
-  instance_name = var.redis_instance_name
-  network_name  = var.network_name
-
-  # Instance configuration
-  tier           = var.redis_tier
-  memory_size_gb = var.redis_memory_size_gb
-  redis_version  = var.redis_version
-
-  # Security
-  auth_enabled            = var.redis_auth_enabled
-  transit_encryption_mode = var.redis_transit_encryption_mode
-
-  # Eviction policy
-  maxmemory_policy = var.redis_maxmemory_policy
-
-  # Maintenance window (Sunday 2 AM UTC)
-  maintenance_window_day  = var.redis_maintenance_window_day
-  maintenance_window_hour = var.redis_maintenance_window_hour
-
-  # Private service connection
-  create_private_service_connection = var.redis_create_private_service_connection
-
-  # Labels
-  labels = local.common_labels
-
-  depends_on = [
-    google_project_service.required_apis,
-    module.networking
-  ]
-}
-
-# -----------------------------------------------------------------------------
-# Redis Secret Versions (Auto-updated on Redis IP change)
-# Automatically sync Redis connection details to Secret Manager
-# -----------------------------------------------------------------------------
-
-resource "google_secret_manager_secret_version" "redis_host" {
-  count = var.enable_redis ? 1 : 0
-
-  secret      = module.secret_manager.secret_ids["redis-host"]
-  secret_data = module.redis[0].host
-
-  depends_on = [
-    module.secret_manager,
-    module.redis
-  ]
-}
-
-resource "google_secret_manager_secret_version" "redis_port" {
-  count = var.enable_redis ? 1 : 0
-
-  secret      = module.secret_manager.secret_ids["redis-port"]
-  secret_data = tostring(module.redis[0].port)
-
-  depends_on = [
-    module.secret_manager,
-    module.redis
-  ]
-}
-
-resource "google_secret_manager_secret_version" "redis_password" {
-  count = var.enable_redis ? 1 : 0
-
-  secret      = module.secret_manager.secret_ids["redis-password"]
-  secret_data = module.redis[0].auth_string
-
-  depends_on = [
-    module.secret_manager,
-    module.redis
-  ]
-}

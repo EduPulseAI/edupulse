@@ -156,36 +156,6 @@ output "vertex_ai_enabled_apis" {
 }
 
 # -----------------------------------------------------------------------------
-# Redis Memorystore Outputs
-# -----------------------------------------------------------------------------
-
-output "redis_enabled" {
-  description = "Whether Redis Memorystore is enabled"
-  value       = var.enable_redis
-}
-
-output "redis_host" {
-  description = "Redis instance host IP"
-  value       = var.enable_redis ? module.redis[0].host : null
-}
-
-output "redis_port" {
-  description = "Redis instance port"
-  value       = var.enable_redis ? module.redis[0].port : null
-}
-
-output "redis_connection_string" {
-  description = "Redis connection string (host:port)"
-  value       = var.enable_redis ? module.redis[0].connection_string : null
-}
-
-output "redis_auth_string" {
-  description = "Redis AUTH password (sensitive)"
-  value       = var.enable_redis ? module.redis[0].auth_string : null
-  sensitive   = true
-}
-
-# -----------------------------------------------------------------------------
 # VPC Connector Outputs
 # -----------------------------------------------------------------------------
 
@@ -242,14 +212,10 @@ output "next_steps" {
      # JWT signing key
      echo -n "$(openssl rand -base64 32)" | gcloud secrets versions add jwt-signing-key --data-file=-
 
-     # Redis Memorystore credentials (after terraform apply creates Redis instance)
-     # Get values from terraform output:
-     #   terraform output redis_host
-     #   terraform output redis_port
-     #   terraform output -raw redis_auth_string
-     echo -n "REDIS_HOST_FROM_OUTPUT" | gcloud secrets versions add redis-host --data-file=-
-     echo -n "6379" | gcloud secrets versions add redis-port --data-file=-
-     terraform output -raw redis_auth_string | gcloud secrets versions add redis-password --data-file=-
+     # Redis credentials (set these from your external Redis provider)
+     echo -n "YOUR_REDIS_HOST" | gcloud secrets versions add redis-host --data-file=-
+     echo -n "YOUR_REDIS_PORT" | gcloud secrets versions add redis-port --data-file=-
+     echo -n "YOUR_REDIS_PASSWORD" | gcloud secrets versions add redis-password --data-file=-
 
   3. Build and push container images:
      # Example for quiz-service

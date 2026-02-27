@@ -124,7 +124,7 @@ resource "google_redis_instance" "redis" {
 
   # Lifecycle - prevent unnecessary recreation
   lifecycle {
-    prevent_destroy = false
+    prevent_destroy = true
   }
 
   depends_on = [
