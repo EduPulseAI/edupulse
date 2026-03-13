@@ -12,6 +12,23 @@ locals {
       terraform   = "true"
     }
   )
+
+  # Services that register with / discover from Eureka
+  eureka_dependent_services = toset(["api-gateway", "profile-service"])
+
+  eureka_env_vars = {
+    EUREKA_PROTOCOL = "https"
+    EUREKA_HOST     = trimprefix(module.eureka_server.service_uri, "https://")
+    EUREKA_PORT     = "443"
+  }
+
+  # Exclude eureka-server from the general for_each (deployed separately below)
+  # and inject computed eureka env vars into any dependent service
+  services_for_each = {
+    for k, v in var.services : k => merge(v, {
+      env_vars = contains(local.eureka_dependent_services, k) ? merge(v.env_vars, local.eureka_env_vars) : v.env_vars
+    }) if k != "eureka-server"
+  }
 }
 
 # -----------------------------------------------------------------------------
@@ -183,13 +200,67 @@ module "vertex_ai" {
 }
 
 # -----------------------------------------------------------------------------
+# Eureka Server (deployed first so its URI can be injected into dependent services)
+# -----------------------------------------------------------------------------
+
+module "eureka_server" {
+  source = "../../modules/cloud_run_service"
+
+  project_id            = var.project_id
+  location              = var.region
+  service_name          = "eureka-server"
+  image_uri             = "${module.artifact_registry.repository_full_path}/${var.services["eureka-server"].image_name}:${var.services["eureka-server"].image_tag}"
+  service_account_email = module.iam.service_account_emails["eureka-server"]
+
+  port          = var.services["eureka-server"].port
+  cpu           = var.services["eureka-server"].cpu
+  memory        = var.services["eureka-server"].memory
+  min_instances = var.services["eureka-server"].min_instances
+  max_instances = var.services["eureka-server"].max_instances
+  concurrency   = var.services["eureka-server"].concurrency
+  timeout       = var.services["eureka-server"].timeout
+  ingress       = var.services["eureka-server"].ingress
+
+  enable_vpc_access  = var.enable_vpc_connector
+  vpc_connector_name = var.enable_vpc_connector ? module.networking[0].connector_self_link : null
+  vpc_egress_setting = var.vpc_egress_setting
+
+  env_vars        = var.services["eureka-server"].env_vars
+  secret_env_vars = var.services["eureka-server"].secret_env_vars
+
+  startup_probe_path              = "/actuator/health/readiness"
+  startup_probe_initial_delay     = 0
+  startup_probe_timeout           = 3
+  startup_probe_period            = 10
+  startup_probe_failure_threshold = 6
+
+  liveness_probe_path              = "/actuator/health/liveness"
+  liveness_probe_initial_delay     = 0
+  liveness_probe_timeout           = 3
+  liveness_probe_period            = 10
+  liveness_probe_failure_threshold = 3
+
+  session_affinity      = false
+  allow_unauthenticated = var.allow_unauthenticated
+  invoker_members       = []
+
+  labels = merge(local.common_labels, { service = "eureka-server" })
+
+  depends_on = [
+    google_project_service.required_apis,
+    module.iam,
+    module.artifact_registry,
+  ]
+}
+
+# -----------------------------------------------------------------------------
 # Cloud Run Services
 # Deploy each microservice as a Cloud Run service
 # -----------------------------------------------------------------------------
 
 module "cloud_run_services" {
   source   = "../../modules/cloud_run_service"
-  for_each = var.services
+  for_each = local.services_for_each
 
   # Basic configuration
   project_id   = var.project_id

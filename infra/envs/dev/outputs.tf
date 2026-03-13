@@ -85,23 +85,28 @@ output "iam_summary" {
 
 output "cloud_run_services" {
   description = "Map of Cloud Run service names to their details"
-  value = {
-    for service_name, service in module.cloud_run_services :
-    service_name => service.service_summary
-  }
+  value = merge(
+    { for service_name, service in module.cloud_run_services : service_name => service.service_summary },
+    { "eureka-server" = module.eureka_server.service_summary }
+  )
 }
 
 output "cloud_run_service_urls" {
   description = "Map of Cloud Run service names to their public URLs"
-  value = {
-    for service_name, service in module.cloud_run_services :
-    service_name => service.service_url
-  }
+  value = merge(
+    { for service_name, service in module.cloud_run_services : service_name => service.service_url },
+    { "eureka-server" = module.eureka_server.service_url }
+  )
 }
 
 output "cloud_run_service_names" {
   description = "List of Cloud Run service names"
-  value       = [for service_name in keys(module.cloud_run_services) : service_name]
+  value       = concat([for service_name in keys(module.cloud_run_services) : service_name], ["eureka-server"])
+}
+
+output "eureka_server_url" {
+  description = "Eureka server public URL (injected as env vars into dependent services)"
+  value       = module.eureka_server.service_url
 }
 
 
@@ -233,7 +238,10 @@ output "next_steps" {
      gcloud run services list --project=${var.project_id} --region=${var.region}
 
   6. Access your services:
-     ${join("\n     ", [for name, url in module.cloud_run_services : "${name}: ${url.service_url}"])}
+     ${join("\n     ", concat(
+       [for name, url in module.cloud_run_services : "${name}: ${url.service_url}"],
+       ["eureka-server: ${module.eureka_server.service_url}"]
+     ))}
 
   7. Test Kafka connectivity from quiz-service:
      curl -X POST https://YOUR_SERVICE_URL/actuator/health

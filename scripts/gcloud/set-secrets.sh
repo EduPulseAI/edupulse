@@ -245,6 +245,32 @@ else
     set_secret "auth-postgres-database" "${database_name}" "PostgreSQL database name for auth service" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
 fi
 
+# Eureka Secrets
+log_info "=== Eureka Server Configuration ==="
+total_secrets=$((total_secrets + 3))
+
+if eureka_host=$(load_env_var "EUREKA_HOST" 2>/dev/null); then
+    set_secret "eureka-host" "${eureka_host}" "Eureka server host" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
+else
+    log_warning "Skipping eureka-host"
+    failed_secrets=$((failed_secrets + 1))
+fi
+
+if eureka_port=$(load_env_var "EUREKA_PORT" 2>/dev/null); then
+    set_secret "eureka-port" "${eureka_port}" "Eureka server port" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
+else
+    log_warning "Skipping eureka-port"
+    failed_secrets=$((failed_secrets + 1))
+fi
+
+if eureka_protocol=$(load_env_var "EUREKA_PROTOCOL" 2>/dev/null); then
+    set_secret "eureka-protocol" "${eureka_protocol}" "Eureka server protocol" && successful_secrets=$((successful_secrets + 1)) || failed_secrets=$((failed_secrets + 1))
+else
+    log_warning "Skipping eureka-protocol"
+    failed_secrets=$((failed_secrets + 1))
+fi
+
+
 echo ""
 
 # AI Configuration (Optional)

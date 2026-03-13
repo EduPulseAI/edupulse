@@ -13,3 +13,9 @@
 [submodule "backend/engagement-service"]
 	path = backend/engagement-service
 	url = git@github.com:EduPulseAI/engagement-service.git
+[submodule "backend/eureka-server"]
+	path = backend/eureka-server
+	url = git@github.com:EduPulseAI/eureka-server.git
+[submodule "backend/api-gateway"]
+	path = backend/api-gateway
+	url = git@github.com:EduPulseAI/api-gateway.git

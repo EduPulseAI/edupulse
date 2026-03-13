@@ -9,7 +9,7 @@ PROJECT := edupulse-483220
 REPOSITORY := edupulse
 
 # Services
-SERVICES := quiz-service engagement-service sse-service profile-service auth-service
+SERVICES := quiz-service engagement-service sse-service profile-service auth-service eureka-server api-gateway
 
 help:
 	@echo "EduPulse Backend Build Commands"
@@ -70,14 +70,11 @@ deploy:
 	@../scripts/gcloud/deploy-service.sh
 
 
-
 # quiz service targets
 build-quiz-service:
 	cd quiz-service && ./mvnw clean install
-
 test-quiz-service:
 	cd quiz-service && ./mvnw test
-
 docker-build-quiz-service:
 	../scripts/docker/build-images.sh quiz-service
 
@@ -87,39 +84,30 @@ docker-push-quiz-service:
 # Engagement service targets
 build-engagement-service:
 	cd engagement-service && ./mvnw clean install
-
 test-engagement-service:
 	cd engagement-service && ./mvnw test
-
 docker-build-engagement-service:
 	../scripts/docker/build-images.sh engagement-service
-
 docker-push-engagement-service:
 	../scripts/docker/build-images.sh --push engagement-service
 
 # SSE service targets
 build-sse-service:
 	cd sse-service && ./mvnw clean install
-
 test-sse-service:
 	cd sse-service && ./mvnw test
-
 docker-build-sse-service:
 	../scripts/docker/build-images.sh sse-service
-
 docker-push-sse-service:
 	../scripts/docker/build-images.sh --push sse-service
 
 # Profile service targets
 build-profile-service:
 	cd profile-service && ./mvnw clean install
-
 test-profile-service:
 	cd profile-service && ./mvnw test
-
 docker-build-profile-service:
 	../scripts/docker/build-images.sh profile-service
-
 docker-push-profile-service:
 	../scripts/docker/build-images.sh --push profile-service
 
@@ -127,34 +115,31 @@ docker-push-profile-service:
 # Auth service targets
 build-auth-service:
 	cd auth-service && ./mvnw clean install
-
 test-auth-service:
 	cd auth-service && ./mvnw test
-
 docker-build-auth-service:
 	../scripts/docker/build-images.sh auth-service
-
 docker-push-auth-service:
 	../scripts/docker/build-images.sh --push auth-service
 
+# Eureka server targets
+docker-build-eureka-server:
+	../scripts/docker/build-images.sh eureka-server
+docker-push-eureka-server:
+	../scripts/docker/build-images.sh --push eureka-server
+
+# API Gateway targets
+docker-build-api-gateway:
+	../scripts/docker/build-images.sh api-gateway
+docker-push-api-gateway:
+	../scripts/docker/build-images.sh --push api-gateway
+
+
 # Quick shortcuts
-bq: build-quiz-service
-dbq: docker-build-quiz-service
-dpq: docker-push-quiz-service
-
-be: build-engagement-service
-dbe: docker-build-engagement-service
-dpe: docker-push-engagement-service
-
-bs: build-sse-service
-dbs: docker-build-sse-service
-dps: docker-push-sse-service
-
-bp: build-profile-service
-dbp: docker-build-profile-service
-dpp: docker-push-profile-service
-
-
-ba: build-auth-service
-dba: docker-build-auth-service
-dpa: docker-push-auth-service
+quiz: docker-push-quiz-service
+engagement: docker-push-engagement-service
+sse: docker-push-sse-service
+profile: docker-push-profile-service
+auth: docker-push-auth-service
+eureka: docker-push-eureka-server
+apigw: docker-push-api-gateway

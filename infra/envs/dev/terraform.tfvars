@@ -223,6 +223,7 @@ services = {
       SPRING_PROFILES_ACTIVE = "prod"
       SERVER_PORT            = "8080"
       LOGGING_LEVEL_ROOT     = "INFO"
+      GCP_PROJECT_ID         = "edupulse-483220"
     }
     secret_env_vars = {
       DATABASE_USER = {
@@ -288,98 +289,46 @@ services = {
     }
   }
 
-  # bandit-engine = {
-  #   image_name    = "bandit-engine"
-  #   image_tag     = "latest"
-  #   port          = 8080
-  #   cpu           = "2000m"
-  #   memory        = "1Gi"
-  #   min_instances = 0
-  #   max_instances = 5
-  #   concurrency   = 40
-  #   timeout       = 120
-  #   ingress       = "INGRESS_TRAFFIC_INTERNAL_ONLY"
-  #   env_vars = {
-  #     SPRING_PROFILES_ACTIVE = "dev"
-  #     SERVER_PORT            = "8080"
-  #     VERTEX_AI_PROJECT      = "edupulse-dev-REPLACEME"
-  #     VERTEX_AI_REGION       = "us-central1"
-  #   }
-  #   secret_env_vars = {
-  #     KAFKA_BOOTSTRAP_SERVERS = {
-  #       secret_name = "kafka-bootstrap-servers"
-  #       version     = "latest"
-  #     }
-  #     KAFKA_API_KEY = {
-  #       secret_name = "kafka-api-key"
-  #       version     = "latest"
-  #     }
-  #     KAFKA_API_SECRET = {
-  #       secret_name = "kafka-api-secret"
-  #       version     = "latest"
-  #     }
-  #     SCHEMA_REGISTRY_URL = {
-  #       secret_name = "schema-registry-url"
-  #       version     = "latest"
-  #     }
-  #     SCHEMA_REGISTRY_API_KEY = {
-  #       secret_name = "schema-registry-api-key"
-  #       version     = "latest"
-  #     }
-  #     SCHEMA_REGISTRY_API_SECRET = {
-  #       secret_name = "schema-registry-api-secret"
-  #       version     = "latest"
-  #     }
-  #   }
-  # }
-  #
-  # tip-service = {
-  #   image_name    = "tip-service"
-  #   image_tag     = "latest"
-  #   port          = 8080
-  #   cpu           = "1000m"
-  #   memory        = "512Mi"
-  #   min_instances = 0
-  #   max_instances = 5
-  #   concurrency   = 40
-  #   timeout       = 90
-  #   ingress       = "INGRESS_TRAFFIC_INTERNAL_ONLY"
-  #   env_vars = {
-  #     SPRING_PROFILES_ACTIVE = "dev"
-  #     SERVER_PORT            = "8080"
-  #     GEMINI_MODEL           = "gemini-2.0-flash-exp"
-  #   }
-  #   secret_env_vars = {
-  #     KAFKA_BOOTSTRAP_SERVERS = {
-  #       secret_name = "kafka-bootstrap-servers"
-  #       version     = "latest"
-  #     }
-  #     KAFKA_API_KEY = {
-  #       secret_name = "kafka-api-key"
-  #       version     = "latest"
-  #     }
-  #     KAFKA_API_SECRET = {
-  #       secret_name = "kafka-api-secret"
-  #       version     = "latest"
-  #     }
-  #     SCHEMA_REGISTRY_URL = {
-  #       secret_name = "schema-registry-url"
-  #       version     = "latest"
-  #     }
-  #     SCHEMA_REGISTRY_API_KEY = {
-  #       secret_name = "schema-registry-api-key"
-  #       version     = "latest"
-  #     }
-  #     SCHEMA_REGISTRY_API_SECRET = {
-  #       secret_name = "schema-registry-api-secret"
-  #       version     = "latest"
-  #     }
-  #     GEMINI_API_KEY = {
-  #       secret_name = "gemini-api-key"
-  #       version     = "latest"
-  #     }
-  #   }
-  # }
+  eureka-server = {
+    image_name    = "eureka-server"
+    image_tag     = "latest"
+    port          = 8761
+    cpu           = "1000m"
+    memory        = "1Gi"
+    min_instances = 0
+    max_instances = 10
+    concurrency   = 80
+    timeout       = 60
+    ingress       = "INGRESS_TRAFFIC_ALL"
+    env_vars = {
+      SPRING_PROFILES_ACTIVE = "prod"
+      SERVER_PORT            = "8761"
+      LOGGING_LEVEL_ROOT     = "INFO"
+    }
+    secret_env_vars = {
+      # No secrets needed for Eureka server in this setup
+    }
+  }
+
+  api-gateway = {
+    image_name    = "api-gateway"
+    image_tag     = "latest"
+    port          = 8080
+    cpu           = "1000m"
+    memory        = "1Gi"
+    min_instances = 0
+    max_instances = 10
+    concurrency   = 80
+    timeout       = 60
+    ingress       = "INGRESS_TRAFFIC_ALL"
+    env_vars = {
+      SPRING_PROFILES_ACTIVE = "prod"
+      SERVER_PORT            = "8080"
+      LOGGING_LEVEL_ROOT     = "INFO"      
+    }
+    secret_env_vars = {}
+  }
+
 }
 
 allow_unauthenticated = true # Dev environment allows public access for testing
