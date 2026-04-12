@@ -292,7 +292,7 @@ services = {
   eureka-server = {
     image_name    = "eureka-server"
     image_tag     = "latest"
-    port          = 8761
+    port          = 8080
     cpu           = "1000m"
     memory        = "1Gi"
     min_instances = 0
@@ -302,7 +302,7 @@ services = {
     ingress       = "INGRESS_TRAFFIC_ALL"
     env_vars = {
       SPRING_PROFILES_ACTIVE = "prod"
-      SERVER_PORT            = "8761"
+      SERVER_PORT            = "8080"
       LOGGING_LEVEL_ROOT     = "INFO"
     }
     secret_env_vars = {

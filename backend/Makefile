@@ -9,7 +9,7 @@ PROJECT := edupulse-483220
 REPOSITORY := edupulse
 
 # Services
-SERVICES := quiz-service engagement-service sse-service profile-service auth-service eureka-server api-gateway
+SERVICES := eureka-server quiz-service engagement-service sse-service profile-service auth-service  api-gateway
 
 help:
 	@echo "EduPulse Backend Build Commands"
@@ -77,9 +77,10 @@ test-quiz-service:
 	cd quiz-service && ./mvnw test
 docker-build-quiz-service:
 	../scripts/docker/build-images.sh quiz-service
-
 docker-push-quiz-service:
 	../scripts/docker/build-images.sh --push quiz-service
+deploy-quiz-service:
+	../scripts/gcloud/deploy-service.sh quiz-service
 
 # Engagement service targets
 build-engagement-service:
@@ -90,6 +91,8 @@ docker-build-engagement-service:
 	../scripts/docker/build-images.sh engagement-service
 docker-push-engagement-service:
 	../scripts/docker/build-images.sh --push engagement-service
+deploy-engagement-service:
+	../scripts/gcloud/deploy-service.sh engagement-service
 
 # SSE service targets
 build-sse-service:
@@ -100,6 +103,8 @@ docker-build-sse-service:
 	../scripts/docker/build-images.sh sse-service
 docker-push-sse-service:
 	../scripts/docker/build-images.sh --push sse-service
+deploy-sse-service:
+	../scripts/gcloud/deploy-service.sh sse-service
 
 # Profile service targets
 build-profile-service:
@@ -110,7 +115,8 @@ docker-build-profile-service:
 	../scripts/docker/build-images.sh profile-service
 docker-push-profile-service:
 	../scripts/docker/build-images.sh --push profile-service
-
+deploy-profile-service:
+	../scripts/gcloud/deploy-service.sh profile-service
 
 # Auth service targets
 build-auth-service:
@@ -121,18 +127,24 @@ docker-build-auth-service:
 	../scripts/docker/build-images.sh auth-service
 docker-push-auth-service:
 	../scripts/docker/build-images.sh --push auth-service
+deploy-auth-service:
+	../scripts/gcloud/deploy-service.sh auth-service
 
 # Eureka server targets
 docker-build-eureka-server:
 	../scripts/docker/build-images.sh eureka-server
 docker-push-eureka-server:
 	../scripts/docker/build-images.sh --push eureka-server
+deploy-eureka-server:
+	../scripts/gcloud/deploy-service.sh eureka-server
 
 # API Gateway targets
 docker-build-api-gateway:
 	../scripts/docker/build-images.sh api-gateway
 docker-push-api-gateway:
 	../scripts/docker/build-images.sh --push api-gateway
+deploy-api-gateway:
+	../scripts/gcloud/deploy-service.sh api-gateway
 
 
 # Quick shortcuts
